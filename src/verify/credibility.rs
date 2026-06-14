@@ -195,7 +195,8 @@ impl TrustConfig {
 /// True if `domain` equals `entry` or is a subdomain of it (so a config entry of
 /// `nyu.edu` matches `pages.stern.nyu.edu`).
 fn domain_in(list: &[String], domain: &str) -> bool {
-    list.iter().any(|e| domain == e || domain.ends_with(&format!(".{e}")))
+    list.iter()
+        .any(|e| domain == e || domain.ends_with(&format!(".{e}")))
 }
 
 // ---------------------------------------------------------------------------
@@ -207,12 +208,7 @@ fn domain_in(list: &[String], domain: &str) -> bool {
 /// exercised by the test suite; delegates to [`score_with`] with an empty
 /// [`TrustConfig`]. The binary's commands call `score_with` directly.
 #[allow(dead_code)]
-pub fn score(
-    url: &str,
-    title: &str,
-    date: Option<&str>,
-    author: Option<&str>,
-) -> Credibility {
+pub fn score(url: &str, title: &str, date: Option<&str>, author: Option<&str>) -> Credibility {
     score_with(url, title, date, author, &TrustConfig::default())
 }
 
@@ -491,8 +487,8 @@ fn parse_date(raw: &str) -> Option<NaiveDate> {
         return Some(dt.with_timezone(&Utc).date_naive());
     }
     // Python normalizes `...Z` to `+00:00`; try that too for non-strict forms.
-    if s.ends_with('Z') {
-        let swapped = format!("{}+00:00", &s[..s.len() - 1]);
+    if let Some(stripped) = s.strip_suffix('Z') {
+        let swapped = format!("{}+00:00", stripped);
         if let Ok(dt) = DateTime::parse_from_rfc3339(&swapped) {
             return Some(dt.with_timezone(&Utc).date_naive());
         }
@@ -602,7 +598,12 @@ mod tests {
     #[test]
     fn government_and_docs_expertise() {
         // .gov bonus
-        let c = score("https://www.bls.gov/cpi/", "Consumer Price Index", None, None);
+        let c = score(
+            "https://www.bls.gov/cpi/",
+            "Consumer Price Index",
+            None,
+            None,
+        );
         // base 50 + .gov 25 = 75
         assert_eq!(c.expertise, 75.0);
 
@@ -661,25 +662,57 @@ mod tests {
 
     #[test]
     fn establishment_news_is_moderate_not_high() {
-        for d in ["https://www.reuters.com/x", "https://apnews.com/y", "https://www.bbc.com/news/z"] {
-            assert_eq!(score(d, "t", None, None).domain, 70.0, "expected MODERATE for {d}");
+        for d in [
+            "https://www.reuters.com/x",
+            "https://apnews.com/y",
+            "https://www.bbc.com/news/z",
+        ] {
+            assert_eq!(
+                score(d, "t", None, None).domain,
+                70.0,
+                "expected MODERATE for {d}"
+            );
         }
     }
 
     #[test]
     fn self_publishing_platforms_not_penalized() {
         // substack/wordpress no longer auto-dinged → fall through to unknown 55.
-        assert_eq!(score("https://writer.substack.com/p/x", "t", None, None).domain, 55.0);
-        assert_eq!(score("https://someone.wordpress.com/x", "t", None, None).domain, 55.0);
+        assert_eq!(
+            score("https://writer.substack.com/p/x", "t", None, None).domain,
+            55.0
+        );
+        assert_eq!(
+            score("https://someone.wordpress.com/x", "t", None, None).domain,
+            55.0
+        );
         // blogspot/wix still flagged low.
-        assert_eq!(score("https://x.blogspot.com/y", "t", None, None).domain, 40.0);
+        assert_eq!(
+            score("https://x.blogspot.com/y", "t", None, None).domain,
+            40.0
+        );
     }
 
     #[test]
     fn primary_financial_data_is_high() {
-        assert_eq!(score("https://fred.stlouisfed.org/series/CPIAUCSL", "CPI", None, None).domain, 90.0);
         assert_eq!(
-            score("https://pages.stern.nyu.edu/~adamodar/data.html", "Damodaran", None, None).domain,
+            score(
+                "https://fred.stlouisfed.org/series/CPIAUCSL",
+                "CPI",
+                None,
+                None
+            )
+            .domain,
+            90.0
+        );
+        assert_eq!(
+            score(
+                "https://pages.stern.nyu.edu/~adamodar/data.html",
+                "Damodaran",
+                None,
+                None
+            )
+            .domain,
             90.0
         );
     }
@@ -694,11 +727,20 @@ mod tests {
             distrusted: vec!["whale.to".into()],
         };
         // distrusted bottoms out
-        assert_eq!(score_with("https://whale.to/a", "t", None, None, &cfg).domain, 20.0);
+        assert_eq!(
+            score_with("https://whale.to/a", "t", None, None, &cfg).domain,
+            20.0
+        );
         // trusted lifts an otherwise-unknown domain to HIGH
-        assert_eq!(score_with("https://myprimary.example/x", "t", None, None, &cfg).domain, 90.0);
+        assert_eq!(
+            score_with("https://myprimary.example/x", "t", None, None, &cfg).domain,
+            90.0
+        );
         // independent: not penalized, not authority
-        assert_eq!(score_with("https://lukesmith.xyz/post", "t", None, None, &cfg).domain, 60.0);
+        assert_eq!(
+            score_with("https://lukesmith.xyz/post", "t", None, None, &cfg).domain,
+            60.0
+        );
     }
 
     #[test]
@@ -708,9 +750,15 @@ mod tests {
             distrusted: vec!["bbc.com".into(), "nyu.edu".into()],
             ..Default::default()
         };
-        assert_eq!(score_with("https://www.bbc.com/news", "t", None, None, &cfg).domain, 20.0);
+        assert_eq!(
+            score_with("https://www.bbc.com/news", "t", None, None, &cfg).domain,
+            20.0
+        );
         // subdomain match: nyu.edu entry catches pages.stern.nyu.edu
-        assert_eq!(score_with("https://pages.stern.nyu.edu/x", "t", None, None, &cfg).domain, 20.0);
+        assert_eq!(
+            score_with("https://pages.stern.nyu.edu/x", "t", None, None, &cfg).domain,
+            20.0
+        );
     }
 
     #[test]

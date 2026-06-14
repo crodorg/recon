@@ -12,9 +12,7 @@ use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use crate::model::{
-    canonical_locator, now_iso, source_id, Claim, Evidence, RunManifest, Source,
-};
+use crate::model::{canonical_locator, now_iso, source_id, Claim, Evidence, RunManifest, Source};
 
 const SOURCES_FILE: &str = "sources.jsonl";
 const EVIDENCE_FILE: &str = "evidence.jsonl";
@@ -26,7 +24,10 @@ pub fn default_runs_root() -> PathBuf {
     let home = std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
-    home.join(".local").join("share").join("research").join("runs")
+    home.join(".local")
+        .join("share")
+        .join("research")
+        .join("runs")
 }
 
 /// Slug: sanitized, lowercased, first ~6 words of the query joined by `-`.
@@ -162,7 +163,8 @@ pub fn register_source(dir: impl AsRef<Path>, mut source: Source) -> Result<Stri
         .append(true)
         .open(&path)
         .with_context(|| format!("open {} for lock", path.display()))?;
-    lock.lock().with_context(|| format!("lock {}", path.display()))?;
+    lock.lock()
+        .with_context(|| format!("lock {}", path.display()))?;
 
     let result = (|| {
         let existing: Vec<Source> = read_jsonl(&path)?;

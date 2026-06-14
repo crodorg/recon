@@ -50,7 +50,14 @@ struct Row {
 pub async fn search(client: &Client, query: &str, limit: usize) -> anyhow::Result<Vec<Candidate>> {
     let _ = client;
     let want = if limit == 0 { 10 } else { limit };
-    run_grok(&build_prompt(query, want), want, "grok-x", "https://x.com", RUN_TIMEOUT).await
+    run_grok(
+        &build_prompt(query, want),
+        want,
+        "grok-x",
+        "https://x.com",
+        RUN_TIMEOUT,
+    )
+    .await
 }
 
 /// Search Reddit via the same agentic grok CLI. Our own fetcher is IP-blocked by
@@ -115,7 +122,11 @@ async fn run_grok(
 
     if !output.status.success() {
         let detail = first_nonempty(&stderr, &stdout);
-        anyhow::bail!("grok exited with {}: {}", output.status, truncate(&detail, 500));
+        anyhow::bail!(
+            "grok exited with {}: {}",
+            output.status,
+            truncate(&detail, 500)
+        );
     }
 
     let rows = extract_last_json_array(&stdout).ok_or_else(|| {
@@ -198,7 +209,11 @@ fn to_candidate(row: Row, origin: &str, url_fallback: &str) -> Candidate {
     };
 
     // title = author + first words of text.
-    let head: String = text.split_whitespace().take(12).collect::<Vec<_>>().join(" ");
+    let head: String = text
+        .split_whitespace()
+        .take(12)
+        .collect::<Vec<_>>()
+        .join(" ");
     let title = match (author.is_empty(), head.is_empty()) {
         (false, false) => format!("{author}: {head}"),
         (false, true) => author.clone(),

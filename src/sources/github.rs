@@ -45,12 +45,16 @@ pub async fn search(client: &Client, query: &str, limit: usize) -> anyhow::Resul
 
     // Detect rate limiting before we attempt to decode the body. GitHub uses
     // 403 (classic) or 429 with `x-ratelimit-remaining: 0` for limit hits.
-    if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+    if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::TOO_MANY_REQUESTS
+    {
         let remaining = header(&resp, "x-ratelimit-remaining");
         let retry_after = header(&resp, "retry-after");
         let reset = header(&resp, "x-ratelimit-reset");
         if remaining.as_deref() == Some("0") || status == reqwest::StatusCode::TOO_MANY_REQUESTS {
-            let hint = if std::env::var("GITHUB_TOKEN").map(|t| !t.trim().is_empty()).unwrap_or(false) {
+            let hint = if std::env::var("GITHUB_TOKEN")
+                .map(|t| !t.trim().is_empty())
+                .unwrap_or(false)
+            {
                 "authenticated limit exhausted"
             } else {
                 "unauthenticated; set GITHUB_TOKEN to raise the limit"
@@ -172,7 +176,11 @@ async fn error_message(resp: reqwest::Response) -> String {
     match resp.text().await {
         Ok(text) => serde_json::from_str::<serde_json::Value>(&text)
             .ok()
-            .and_then(|v| v.get("message").and_then(|m| m.as_str()).map(|s| s.to_string()))
+            .and_then(|v| {
+                v.get("message")
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+            })
             .unwrap_or_else(|| {
                 let t = text.trim();
                 if t.is_empty() {

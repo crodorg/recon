@@ -177,7 +177,13 @@ fn is_pdf(bytes: &[u8]) -> bool {
 fn doi_filename(doi: &str) -> String {
     let safe: String = doi
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     format!("sci-hub-{safe}.pdf")
 }
@@ -255,8 +261,7 @@ pub async fn fetch_paper(input: &str, out_dir: &str, force_refresh: bool) -> Res
             Some(b) => b,
             None => continue,
         };
-        std::fs::create_dir_all(out_dir)
-            .with_context(|| format!("create out dir {out_dir}"))?;
+        std::fs::create_dir_all(out_dir).with_context(|| format!("create out dir {out_dir}"))?;
         let path = Path::new(out_dir).join(doi_filename(&doi));
         std::fs::write(&path, &bytes).with_context(|| format!("write {}", path.display()))?;
         return Ok(FetchResult {
@@ -312,15 +317,20 @@ mod tests {
 
     #[test]
     fn no_pdf_on_article_not_found_page() {
-        let html = r#"<html><body><p>article not found</p><img src="/misc/logo.png"></body></html>"#;
+        let html =
+            r#"<html><body><p>article not found</p><img src="/misc/logo.png"></body></html>"#;
         assert_eq!(extract_pdf_url(html, "sci-hub.se"), None);
     }
 
     #[test]
     fn parses_doi_forms() {
-        assert!(matches!(parse_id("10.1038/171737a0"), Some(PaperId::Doi(d)) if d == "10.1038/171737a0"));
+        assert!(
+            matches!(parse_id("10.1038/171737a0"), Some(PaperId::Doi(d)) if d == "10.1038/171737a0")
+        );
         assert!(matches!(parse_id("doi:10.1000/Xyz"), Some(PaperId::Doi(d)) if d == "10.1000/xyz"));
-        assert!(matches!(parse_id("https://doi.org/10.1000/abc#sec"), Some(PaperId::Doi(d)) if d == "10.1000/abc"));
+        assert!(
+            matches!(parse_id("https://doi.org/10.1000/abc#sec"), Some(PaperId::Doi(d)) if d == "10.1000/abc")
+        );
     }
 
     #[test]
@@ -338,7 +348,7 @@ mod tests {
     #[test]
     fn validates_pdf_magic_and_size() {
         let mut good = b"%PDF-1.7\n".to_vec();
-        good.extend(std::iter::repeat(b'x').take(MIN_PDF_BYTES));
+        good.extend(std::iter::repeat_n(b'x', MIN_PDF_BYTES));
         assert!(is_pdf(&good));
         assert!(!is_pdf(b"%PDF-1.7")); // too short
         assert!(!is_pdf(&[b'P'; 4096])); // wrong magic
@@ -346,6 +356,9 @@ mod tests {
 
     #[test]
     fn doi_filename_is_filesystem_safe() {
-        assert_eq!(doi_filename("10.1038/171737a0"), "sci-hub-10.1038_171737a0.pdf");
+        assert_eq!(
+            doi_filename("10.1038/171737a0"),
+            "sci-hub-10.1038_171737a0.pdf"
+        );
     }
 }

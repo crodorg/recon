@@ -34,18 +34,15 @@ fn build_url(query: &str, limit: usize) -> String {
     let q = url::form_urlencoded::byte_serialize(query.as_bytes()).collect::<String>();
     // Algolia rejects hitsPerPage of 0; clamp to at least 1.
     let per_page = limit.max(1);
-    format!(
-        "https://hn.algolia.com/api/v1/search?query={q}&tags=story&hitsPerPage={per_page}"
-    )
+    format!("https://hn.algolia.com/api/v1/search?query={q}&tags=story&hitsPerPage={per_page}")
 }
 
 fn hit_to_candidate(hit: &Value) -> Candidate {
     let object_id = str_field(hit, "objectID").unwrap_or_default();
 
     // raw_url: prefer the story's external url; else the HN item permalink.
-    let raw_url = str_field(hit, "url").unwrap_or_else(|| {
-        format!("https://news.ycombinator.com/item?id={object_id}")
-    });
+    let raw_url = str_field(hit, "url")
+        .unwrap_or_else(|| format!("https://news.ycombinator.com/item?id={object_id}"));
 
     let title = str_field(hit, "title").unwrap_or_default();
 

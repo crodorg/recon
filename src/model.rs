@@ -225,21 +225,8 @@ pub struct SupportResult {
 
 /// Tracking query parameters dropped during canonicalization.
 const TRACKING_PARAMS: &[&str] = &[
-    "fbclid",
-    "gclid",
-    "msclkid",
-    "dclid",
-    "ref",
-    "ref_src",
-    "ref_url",
-    "referrer",
-    "source",
-    "mc_cid",
-    "mc_eid",
-    "igshid",
-    "spm",
-    "_hsenc",
-    "_hsmi",
+    "fbclid", "gclid", "msclkid", "dclid", "ref", "ref_src", "ref_url", "referrer", "source",
+    "mc_cid", "mc_eid", "igshid", "spm", "_hsenc", "_hsmi",
 ];
 
 fn is_tracking_param(key: &str) -> bool {
@@ -345,7 +332,10 @@ pub fn sha16(input: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(input.as_bytes());
     let digest = hasher.finalize();
-    let hex = digest.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+    let hex = digest
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
     hex[..16].to_string()
 }
 
@@ -400,10 +390,9 @@ mod tests {
 
     #[test]
     fn evidence_accepts_provenance() {
-        let e: Evidence = serde_json::from_str(
-            r#"{"source_id":"s","quote":"q","provenance":"primary_fetch"}"#,
-        )
-        .unwrap();
+        let e: Evidence =
+            serde_json::from_str(r#"{"source_id":"s","quote":"q","provenance":"primary_fetch"}"#)
+                .unwrap();
         assert_eq!(e.provenance.as_deref(), Some("primary_fetch"));
     }
 

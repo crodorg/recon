@@ -114,7 +114,13 @@ pub async fn search_with(
         .enumerate()
         .filter(|(_, r)| !r.url.is_empty())
         .map(|(i, r)| {
-            let ApiResult { title, url, snippet, date, last_updated } = r;
+            let ApiResult {
+                title,
+                url,
+                snippet,
+                date,
+                last_updated,
+            } = r;
             // Live Search API responses carry `last_updated`, not `date` (verified
             // 2026-06-08 against POST /search). Prefer an explicit `date` if a future
             // response ever includes one, else fall back to `last_updated`.
@@ -158,7 +164,10 @@ fn build_request_body(query: &str, max_results: usize, opts: &SearchOpts) -> ser
         obj.insert("search_after_date_filter".into(), serde_json::json!(after));
     }
     if let Some(before) = &opts.before {
-        obj.insert("search_before_date_filter".into(), serde_json::json!(before));
+        obj.insert(
+            "search_before_date_filter".into(),
+            serde_json::json!(before),
+        );
     }
     if let Some(recency) = &opts.recency {
         obj.insert("search_recency_filter".into(), serde_json::json!(recency));
@@ -227,6 +236,10 @@ mod tests {
             ..Default::default()
         };
         let body = build_request_body("q", 10, &opts);
-        assert!(body.as_object().unwrap().get("max_tokens_per_page").is_none());
+        assert!(body
+            .as_object()
+            .unwrap()
+            .get("max_tokens_per_page")
+            .is_none());
     }
 }

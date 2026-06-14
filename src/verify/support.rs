@@ -274,6 +274,9 @@ mod tests {
         let r = compute(claim, &quotes);
         assert_eq!(r.status, "needs_review");
         assert_eq!(r.score, 0.15);
-        assert_eq!(r.notes, "low lexical overlap; number mismatch; entity mismatch");
+        assert_eq!(
+            r.notes,
+            "low lexical overlap; number mismatch; entity mismatch"
+        );
     }
 }

@@ -1,10 +1,10 @@
 //! research — terminal deep-research engine: retrieval + deterministic verification.
 
-mod model;
 mod http;
-mod store;
-mod sources;
+mod model;
 mod scihub;
+mod sources;
+mod store;
 mod verify;
 
 use std::collections::HashMap;
@@ -248,7 +248,8 @@ async fn cmd_scihub_domains(refresh: bool) -> Result<()> {
 // retrieve
 // ---------------------------------------------------------------------------
 
-type CandFut<'a> = Pin<Box<dyn std::future::Future<Output = (String, Result<Vec<Candidate>>)> + 'a>>;
+type CandFut<'a> =
+    Pin<Box<dyn std::future::Future<Output = (String, Result<Vec<Candidate>>)> + 'a>>;
 
 /// Resolve the run dir (append to a given one, or mint a fresh timestamped one)
 /// and ensure its manifest + empty JSONL files exist. Idempotent on an existing
@@ -363,18 +364,13 @@ async fn cmd_retrieve(args: RetrieveArgs) -> Result<()> {
             }
             "perplexity" => {
                 let opts = &pplx_opts;
-                Box::pin(async move {
-                    (n, sources::perplexity::search_with(c, q, limit, opts).await)
-                })
+                Box::pin(
+                    async move { (n, sources::perplexity::search_with(c, q, limit, opts).await) },
+                )
             }
             other => {
                 let other = other.to_string();
-                Box::pin(async move {
-                    (
-                        n,
-                        Err(anyhow::anyhow!("unknown source: {other}")),
-                    )
-                })
+                Box::pin(async move { (n, Err(anyhow::anyhow!("unknown source: {other}"))) })
             }
         };
         futures.push(fut);
@@ -509,21 +505,21 @@ fn cmd_list_sources(dir: String) -> Result<()> {
 
 fn cmd_register_source(dir: String, json: String) -> Result<()> {
     let source: Source = serde_json::from_str(&json).context("parse source json")?;
-    let id = store::register_source(&PathBuf::from(dir), source)?;
+    let id = store::register_source(PathBuf::from(dir), source)?;
     println!("{id}");
     Ok(())
 }
 
 fn cmd_add_evidence(dir: String, json: String) -> Result<()> {
     let evidence: Evidence = serde_json::from_str(&json).context("parse evidence json")?;
-    let id = store::add_evidence(&PathBuf::from(dir), evidence)?;
+    let id = store::add_evidence(PathBuf::from(dir), evidence)?;
     println!("{id}");
     Ok(())
 }
 
 fn cmd_add_claim(dir: String, json: String) -> Result<()> {
     let claim: Claim = serde_json::from_str(&json).context("parse claim json")?;
-    let id = store::add_claim(&PathBuf::from(dir), claim)?;
+    let id = store::add_claim(PathBuf::from(dir), claim)?;
     println!("{id}");
     Ok(())
 }
@@ -557,8 +553,8 @@ async fn cmd_verify_citations(
     }
 
     if let Some(report) = &report {
-        let text = std::fs::read_to_string(report)
-            .with_context(|| format!("read report {report}"))?;
+        let text =
+            std::fs::read_to_string(report).with_context(|| format!("read report {report}"))?;
         entries.extend(parse_bibliography(&text));
     }
 
@@ -610,10 +606,7 @@ fn parse_bibliography(text: &str) -> Vec<CitationEntry> {
 
 fn parse_bib_line(line: &str) -> Option<CitationEntry> {
     // strip a list marker
-    let mut s = line
-        .trim_start_matches(['-', '*', '+'])
-        .trim()
-        .to_string();
+    let mut s = line.trim_start_matches(['-', '*', '+']).trim().to_string();
 
     // leading number: "[12]" or "12." or "12)"
     let mut num = None;
@@ -645,7 +638,11 @@ fn parse_bib_line(line: &str) -> Option<CitationEntry> {
         let lower = clean.to_ascii_lowercase();
         if lower.starts_with("http://") || lower.starts_with("https://") {
             if lower.contains("doi.org/10.") && doi.is_none() {
-                doi = Some(model::canonical_locator(clean).trim_start_matches("doi:").to_string());
+                doi = Some(
+                    model::canonical_locator(clean)
+                        .trim_start_matches("doi:")
+                        .to_string(),
+                );
             }
             if url.is_none() {
                 url = Some(clean.to_string());
@@ -685,7 +682,12 @@ fn parse_bib_line(line: &str) -> Option<CitationEntry> {
     }
 
     let title = {
-        let t = title_tokens.join(" ").trim().trim_matches('.').trim().to_string();
+        let t = title_tokens
+            .join(" ")
+            .trim()
+            .trim_matches('.')
+            .trim()
+            .to_string();
         if t.is_empty() {
             None
         } else {

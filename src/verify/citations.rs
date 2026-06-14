@@ -44,9 +44,10 @@ pub async fn verify(
                 status = "verified".to_string();
 
                 // Title similarity check (only when both titles are present).
-                if let (Some(entry_title), Some(meta_title)) =
-                    (non_empty(&entry.title), title.as_deref().filter(|t| !t.is_empty()))
-                {
+                if let (Some(entry_title), Some(meta_title)) = (
+                    non_empty(&entry.title),
+                    title.as_deref().filter(|t| !t.is_empty()),
+                ) {
                     let similarity = title_similarity(entry_title, meta_title);
                     if similarity < 0.5 {
                         issues.push(format!(
@@ -58,9 +59,7 @@ pub async fn verify(
                 }
 
                 // Year match check (only when both years parse as integers).
-                if let (Some(entry_year), Some(meta_year)) =
-                    (parse_year(&entry.year), year)
-                {
+                if let (Some(entry_year), Some(meta_year)) = (parse_year(&entry.year), year) {
                     if entry_year != meta_year {
                         issues.push(format!(
                             "Year mismatch: report says {entry_year}, DOI says {meta_year}"
@@ -130,7 +129,10 @@ async fn resolve_doi(client: &reqwest::Client, doi: &str) -> DoiOutcome {
 
     let resp = match client
         .get(&url)
-        .header(reqwest::header::ACCEPT, "application/vnd.citationstyles.csl+json")
+        .header(
+            reqwest::header::ACCEPT,
+            "application/vnd.citationstyles.csl+json",
+        )
         .timeout(NET_TIMEOUT)
         .send()
         .await
@@ -196,8 +198,7 @@ fn csl_int(value: &serde_json::Value) -> Option<i64> {
 fn encode_doi_path(doi: &str) -> String {
     let mut out = String::with_capacity(doi.len());
     for b in doi.bytes() {
-        let keep = b.is_ascii_alphanumeric()
-            || matches!(b, b'-' | b'_' | b'.' | b'~' | b'/');
+        let keep = b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~' | b'/');
         if keep {
             out.push(b as char);
         } else {
@@ -276,9 +277,7 @@ fn detect_hallucination_patterns(entry: &CitationEntry) -> Vec<String> {
         }
         // Future year.
         if year > current_year {
-            issues.push(format!(
-                "Future year: {year} (current: {current_year})"
-            ));
+            issues.push(format!("Future year: {year} (current: {current_year})"));
         }
         // Anachronistic modern-AI terms in a pre-2000 title.
         if year < 2000 {

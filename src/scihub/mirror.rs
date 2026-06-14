@@ -134,8 +134,7 @@ pub fn read_cache() -> Option<DomainCache> {
 fn write_cache(cache: &DomainCache) -> Result<()> {
     let path = cache_path();
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .with_context(|| format!("create {}", parent.display()))?;
+        std::fs::create_dir_all(parent).with_context(|| format!("create {}", parent.display()))?;
     }
     let json = serde_json::to_string_pretty(cache).context("serialize domain cache")?;
     std::fs::write(&path, json).with_context(|| format!("write {}", path.display()))?;
@@ -164,8 +163,7 @@ async fn probe_domain(client: &reqwest::Client, host: &str) -> DomainStatus {
 pub async fn refresh() -> Result<DomainCache> {
     let client = http::client_timeout(PROBE_TIMEOUT_SECS);
     let seed = load_seed();
-    let statuses: Vec<DomainStatus> =
-        join_all(seed.iter().map(|h| probe_domain(&client, h))).await;
+    let statuses: Vec<DomainStatus> = join_all(seed.iter().map(|h| probe_domain(&client, h))).await;
     let cache = DomainCache {
         updated_at: crate::model::now_iso(),
         domains: statuses,
@@ -177,10 +175,12 @@ pub async fn refresh() -> Result<DomainCache> {
 /// True if the cache timestamp is older than the TTL (or unparseable).
 fn is_stale(updated_at: &str) -> bool {
     match DateTime::parse_from_rfc3339(updated_at) {
-        Ok(t) => Utc::now()
-            .signed_duration_since(t.with_timezone(&Utc))
-            .num_hours()
-            >= TTL_HOURS,
+        Ok(t) => {
+            Utc::now()
+                .signed_duration_since(t.with_timezone(&Utc))
+                .num_hours()
+                >= TTL_HOURS
+        }
         Err(_) => true,
     }
 }
@@ -223,12 +223,30 @@ mod tests {
         let cache = DomainCache {
             updated_at: Utc::now().to_rfc3339(),
             domains: vec![
-                DomainStatus { host: "slow".into(), status: "live".into(), last_checked: "".into(), latency_ms: Some(900) },
-                DomainStatus { host: "dead".into(), status: "dead".into(), last_checked: "".into(), latency_ms: None },
-                DomainStatus { host: "fast".into(), status: "live".into(), last_checked: "".into(), latency_ms: Some(100) },
+                DomainStatus {
+                    host: "slow".into(),
+                    status: "live".into(),
+                    last_checked: "".into(),
+                    latency_ms: Some(900),
+                },
+                DomainStatus {
+                    host: "dead".into(),
+                    status: "dead".into(),
+                    last_checked: "".into(),
+                    latency_ms: None,
+                },
+                DomainStatus {
+                    host: "fast".into(),
+                    status: "live".into(),
+                    last_checked: "".into(),
+                    latency_ms: Some(100),
+                },
             ],
         };
         let live = cache.live();
-        assert_eq!(live.iter().map(|d| d.host.as_str()).collect::<Vec<_>>(), vec!["fast", "slow"]);
+        assert_eq!(
+            live.iter().map(|d| d.host.as_str()).collect::<Vec<_>>(),
+            vec!["fast", "slow"]
+        );
     }
 }
