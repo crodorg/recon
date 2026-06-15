@@ -2,7 +2,7 @@
 
 use anyhow::Context;
 
-pub const USER_AGENT: &str = "research-cli/0.1 (+terminal deep-research)";
+pub const USER_AGENT: &str = "recon-cli/0.1 (+terminal deep-research)";
 
 /// Build the shared reqwest client (fixed UA, 20s timeout).
 pub fn client() -> reqwest::Client {

@@ -1,5 +1,5 @@
 [package]
-name = "research"
+name = "recon"
 version = "0.1.0"
 edition = "2021"
 description = "Terminal deep-research engine: retrieval + deterministic verification substrate"
@@ -13,7 +13,7 @@ authors = ["Chris Rodriguez"]
 scihub = []
 
 [[bin]]
-name = "research"
+name = "recon"
 path = "src/main.rs"
 
 [dependencies]

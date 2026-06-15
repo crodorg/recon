@@ -1,4 +1,4 @@
-# research — query strategy (the decomposition doctrine)
+# recon — query strategy (the decomposition doctrine)
 
 The dominant failure mode of deep research is **"the critical source was never surfaced,"** not
 "we under-read a source." So the whole game is decomposition: turn one question into many good
@@ -7,7 +7,7 @@ $0.005/query), and read only the best survivors. This file is the doctrine the *
 agent (decompose round) and the **gap-critic** agent (between rounds) follow. It is editable —
 when a tactic stops working, change it here, not in code.
 
-The binary executes whatever you decide via `research retrieve` flags:
+The binary executes whatever you decide via `recon retrieve` flags:
 `--domains a.gov,b.gov` · `--after MM/DD/YYYY` · `--before MM/DD/YYYY` ·
 `--recency hour|day|week|month|year` · `--max-tokens-per-page N`. Verified live: these are the
 **native** Search API params — use them, **not** inline `site:`/`filetype:` operators in the query
@@ -110,7 +110,7 @@ The engine runs up to three rounds. Each has a different job; the query style ch
 
 ## 5. The query object — what the strategist emits
 
-Each query is an object the workflow turns into one `research retrieve` invocation:
+Each query is an object the workflow turns into one `recon retrieve` invocation:
 
 ```
 {

@@ -1,14 +1,14 @@
 ---
-name: research
-description: "Terminal deep-research: routes a query to the right sources (web via Perplexity, X/social via Grok, repos/HN/markets), reads + verifies locally, writes a cited markdown report into the session. Invoke: '/research <query>'. Two modes — quick (fast, exploratory) and deep (high-stakes: law, health, finance, safety, major decisions; slow, full verification). Flags: --deep / --quick. Not for trivial lookups you can answer directly."
+name: recon
+description: "Terminal deep-research: routes a query to the right sources (web via Perplexity, X/social via Grok, repos/HN/markets), reads + verifies locally, writes a cited markdown report into the session. Invoke: '/recon <query>'. Two modes — quick (fast, exploratory) and deep (high-stakes: law, health, finance, safety, major decisions; slow, full verification). Flags: --deep / --quick. Not for trivial lookups you can answer directly."
 ---
 
-# research — terminal deep-research
+# recon — terminal deep-research
 
 Approaches claude.ai-Research depth (many sources → a cited report) but runs from the
 terminal, so the report lands in this session's context. **Perplexity owns web breadth;
 Grok owns X/social; you (local Claude, on the subscription) own reading, verification, and
-synthesis.** The `research` binary is the deterministic substrate — retrieval, dedup,
+synthesis.** The `recon` binary is the deterministic substrate — retrieval, dedup,
 credibility scoring, phantom-citation and claim-support checks. You supply the judgment.
 
 The one rule that makes this good: **route to the modality the answer lives in.** Don't
@@ -25,13 +25,13 @@ connector choice.
    ```sh
    PPLX="${PERPLEXITY_API_KEY}"   # export it in your shell, or have your secret manager set it
    ```
-   Prefix every `research retrieve` with `PERPLEXITY_API_KEY="$PPLX"`. If it's empty, tell
+   Prefix every `recon retrieve` with `PERPLEXITY_API_KEY="$PPLX"`. If it's empty, tell
    the user to export the key, and offer to proceed keyless (Perplexity drops out; Grok/X +
    free sources + local synthesis still run).
-2. **Binary.** `command -v research` — if missing, the user needs to install it: run
+2. **Binary.** `command -v recon` — if missing, the user needs to install it: run
    `./install.sh` from the repo (builds the release binary, symlinks it to
-   `~/.local/bin/research`, and installs this skill). See the repo README.
-3. The binary creates and owns the run dir under `~/.local/share/research/runs/<id>/`
+   `~/.local/bin/recon`, and installs this skill). See the repo README.
+3. The binary creates and owns the run dir under `~/.local/share/recon/runs/<id>/`
    (`sources.jsonl` / `evidence.jsonl` / `claims.jsonl` / `run_manifest.json`). You write
    the final report into that same dir.
 
@@ -95,20 +95,20 @@ works keyless for light use; a free `OPENALEX_API_KEY` (env) lifts the daily cei
 
 1. **Retrieve, staged.** Fire the fast batch; capture `run_dir`:
    ```sh
-   RUN=$(PERPLEXITY_API_KEY="$PPLX" research retrieve "<query>" --mode quick \
+   RUN=$(PERPLEXITY_API_KEY="$PPLX" recon retrieve "<query>" --mode quick \
           --sources <fast_sources> --limit 8 | tee /tmp/r-fast.json \
           | python3 -c 'import sys,json;print(json.load(sys.stdin)["run_dir"])')
    ```
    If `slow_sources` is non-empty, append it into the same run (it runs while you read):
    ```sh
-   PERPLEXITY_API_KEY="$PPLX" research retrieve "<query>" --mode quick \
+   PERPLEXITY_API_KEY="$PPLX" recon retrieve "<query>" --mode quick \
      --sources <slow_sources> --limit 6 --run-dir "$RUN" >/tmp/r-slow.json 2>/dev/null &
    ```
 2. **Read** the top ~6–10 sources by credibility (read `$RUN/sources.jsonl`). For each,
    `web_fetch` the URL, pull the load-bearing facts. For authoritative queries, follow the
    primary-source hierarchy in `sources.md` — trace claims to primary text, don't stop at
    a blog about the statute. `wait` for the slow batch, then fold in the social signal.
-3. **Write** the report (Step 5). Then **verify**: `research verify-citations --dir "$RUN"`
+3. **Write** the report (Step 5). Then **verify**: `recon verify-citations --dir "$RUN"`
    (live URL/DOI checks). Fix or flag anything `suspicious`/`unverified`.
 
 Quick output shape: a **Research Brief** — verdict up top, then findings with inline `[N]`
@@ -131,7 +131,7 @@ doesn't burn queries rediscovering what you already have.
 
 ```
 Workflow({
-  scriptPath: "__RESEARCH_SKILL_DIR__/research.workflow.js",
+  scriptPath: "__RECON_SKILL_DIR__/recon.workflow.js",
   args: {
     query: "<query>",
     context: "<front-loaded known context, or ''>",
@@ -142,7 +142,7 @@ Workflow({
     slow_sources: "<slow_sources>",   // "" if authoritative (social suppressed)
     mode: "deep",
     as_of: "<today YYYY-MM-DD>",       // pass it; the workflow can't read the clock
-    skill_dir: "__RESEARCH_SKILL_DIR__"
+    skill_dir: "__RECON_SKILL_DIR__"
   }
 })
 ```
@@ -179,7 +179,7 @@ the path, and the headline caveats.
 ## Full-text retrieval (Sci-Hub) — a reading aid, NOT a citation source
 
 > **Opt-in feature, off by default.** Sci-Hub support is compiled only when the binary is
-> built with `cargo build --features scihub`. Without it, `research fetch-paper` doesn't
+> built with `cargo build --features scihub`. Without it, `recon fetch-paper` doesn't
 > exist and the deep read step simply skips this rung — a blocked paper becomes an
 > `inaccessible` gap marker (below). Everything else works unchanged.
 
@@ -202,14 +202,14 @@ When the user wants the **actual full text** of a specific paper (typically payw
 chasing a PubMed hit down to the paper itself), fetch it:
 
 ```sh
-research fetch-paper <doi|pmid> --out <dir>   # 10.1038/171737a0  |  pmid:13054692  |  123456
+recon fetch-paper <doi|pmid> --out <dir>   # 10.1038/171737a0  |  pmid:13054692  |  123456
 ```
 
 Returns JSON: `{ found, doi, pmid?, pdf_path?, domain_used?, domains_tried[], note? }`. On
 `found:true`, read `pdf_path` for the content (the `pdf` skill / `pdftotext`). It's keyed by
 DOI; a PMID is auto-resolved via NCBI eutils. The live-domain mirror self-refreshes (24h TTL;
-`--refresh` forces a re-probe; `research scihub-domains` inspects it). If every domain is dead,
-tell the operator to add a current one to `~/.config/research/scihub.conf` and re-run `--refresh`.
+`--refresh` forces a re-probe; `recon scihub-domains` inspects it). If every domain is dead,
+tell the operator to add a current one to `~/.config/recon/scihub.conf` and re-run `--refresh`.
 
 **Hard rules — keep it walled off from the cite flow:**
 

@@ -11,7 +11,7 @@
 //!
 //! Domain authority has two layers: a NEUTRAL built-in tier list (so the public
 //! crate ships no one's worldview), and an optional user [`TrustConfig`] loaded
-//! from `~/.config/research/trust.conf` whose `trusted`/`independent`/`distrusted`
+//! from `~/.config/recon/trust.conf` whose `trusted`/`independent`/`distrusted`
 //! tiers override the defaults. Heterodox sources belong in the user's config, not
 //! compiled in. `score()` keeps its frozen signature (empty config); `score_with`
 //! takes the config.
@@ -126,7 +126,7 @@ const LOW_AUTHORITY_INDICATORS: &[&str] = &["blogspot.com", "wix.com"];
 // User trust config (external, neutral-crate-friendly override)
 // ---------------------------------------------------------------------------
 
-/// User-curated domain trust tiers, loaded from `~/.config/research/trust.conf`.
+/// User-curated domain trust tiers, loaded from `~/.config/recon/trust.conf`.
 /// Overrides the built-in tiers so the published crate stays neutral and the
 /// operator tunes their own trust map (and flags conspiracy/pseudoscience as
 /// `distrusted`). Empty = no overrides (the built-in defaults stand).
@@ -143,13 +143,13 @@ pub struct TrustConfig {
 }
 
 impl TrustConfig {
-    /// Default config path: `$XDG_CONFIG_HOME/research/trust.conf` (falls back to
-    /// `$HOME/.config/research/trust.conf`).
+    /// Default config path: `$XDG_CONFIG_HOME/recon/trust.conf` (falls back to
+    /// `$HOME/.config/recon/trust.conf`).
     pub fn default_path() -> Option<PathBuf> {
         let base = std::env::var_os("XDG_CONFIG_HOME")
             .map(PathBuf::from)
             .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))?;
-        Some(base.join("research").join("trust.conf"))
+        Some(base.join("recon").join("trust.conf"))
     }
 
     /// Load from the default path. Missing file or any read/parse error yields an
@@ -342,7 +342,7 @@ fn evaluate_recency(date: Option<&str>) -> f64 {
 fn evaluate_expertise(domain: &str, title: &str, author: Option<&str>) -> f64 {
     let mut score = 50.0_f64;
 
-    // Academic/research domains.
+    // Academic/recon domains.
     let academic = ["arxiv", "nature", "science", "ieee", "acm"];
     if academic.iter().any(|d| domain.contains(d)) {
         score += 30.0;

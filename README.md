@@ -1,4 +1,4 @@
-# research — terminal deep-research
+# recon — terminal deep-research
 
 A terminal-native deep-research tool. It fans out across web breadth (Perplexity), X/social
 (Grok), and free sources, then **reads, verifies, and synthesizes a cited report locally inside
@@ -7,12 +7,12 @@ web app you have to copy out of.
 
 It is two pieces:
 
-1. **`research`** — a small, dependency-light Rust binary: the deterministic substrate. It owns
+1. **`recon`** — a small, dependency-light Rust binary: the deterministic substrate. It owns
    retrieval (Perplexity, Hacker News, GitHub, Polymarket, Grok, OpenAlex, Crossref), URL
    canonicalization and dedup, credibility scoring, a phantom-citation guard (DOI/URL resolution
    + hallucination-pattern checks), and a claim↔evidence support check. It writes append-only
    `sources.jsonl` / `evidence.jsonl` / `claims.jsonl` to a run directory.
-2. **A Claude Code skill (`/research`)** — the reasoning layer. It classifies the question,
+2. **A Claude Code skill (`/recon`)** — the reasoning layer. It classifies the question,
    routes it to the right modalities, drives the binary, reads the surviving sources, runs an
    iterative search→read→verify→confirm loop, and writes the cited markdown report. The judgment
    and synthesis run on **your** Claude Code subscription.
@@ -40,7 +40,7 @@ reasoning layer.
 
 ## Requirements
 
-- **Claude Code** (required — the `/research` skill is the reasoning layer).
+- **Claude Code** (required — the `/recon` skill is the reasoning layer).
 - **Rust toolchain** (`cargo`) to build the binary.
 - **API keys are optional and additive** — see the capability matrix below. Nothing but the free
   connectors works with zero keys; the tool degrades gracefully as keys are absent.
@@ -48,17 +48,17 @@ reasoning layer.
 ## Install
 
 ```sh
-git clone <this-repo> research && cd research
+git clone <this-repo> recon && cd recon
 ./install.sh                      # default build (Sci-Hub OFF)
 # or: ./install.sh --features scihub   # opt into the Sci-Hub full-text reading aid
 ```
 
-`install.sh` builds the release binary, symlinks it to `~/.local/bin/research`, and installs the
-skill into `~/.claude/skills/research/` (honoring `CLAUDE_CONFIG_DIR`). Make sure `~/.local/bin`
+`install.sh` builds the release binary, symlinks it to `~/.local/bin/recon`, and installs the
+skill into `~/.claude/skills/recon/` (honoring `CLAUDE_CONFIG_DIR`). Make sure `~/.local/bin`
 is on your `PATH`. Then, in Claude Code:
 
 ```
-/research <your question>
+/recon <your question>
 ```
 
 ## Capability matrix — what works with which keys
@@ -80,7 +80,7 @@ major decisions; slow, full iterative verification). Override with `--quick` / `
 
 - **API keys** are read from the environment (e.g. `export PERPLEXITY_API_KEY=...`). Keep them in
   a secret manager and export at session start if you prefer.
-- **`trust.conf`** (`~/.config/research/trust.conf`) lets you override the built-in domain
+- **`trust.conf`** (`~/.config/recon/trust.conf`) lets you override the built-in domain
   credibility tiers with your own curation — `[trusted]` / `[independent]` / `[distrusted]`. The
   compiled defaults are deliberately neutral (mainstream primary sources); your worldview lives in
   this file, never in the binary. See [`config/trust.conf.example`](config/trust.conf.example).

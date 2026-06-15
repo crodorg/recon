@@ -19,15 +19,12 @@ const EVIDENCE_FILE: &str = "evidence.jsonl";
 const CLAIMS_FILE: &str = "claims.jsonl";
 const MANIFEST_FILE: &str = "run_manifest.json";
 
-/// Default runs root: `$HOME/.local/share/research/runs`.
+/// Default runs root: `$HOME/.local/share/recon/runs`.
 pub fn default_runs_root() -> PathBuf {
     let home = std::env::var_os("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
-    home.join(".local")
-        .join("share")
-        .join("research")
-        .join("runs")
+    home.join(".local").join("share").join("recon").join("runs")
 }
 
 /// Slug: sanitized, lowercased, first ~6 words of the query joined by `-`.
@@ -152,7 +149,7 @@ pub fn register_source(dir: impl AsRef<Path>, mut source: Source) -> Result<Stri
     let id = source.source_id.clone();
     let path = dir.as_ref().join(SOURCES_FILE);
 
-    // The deep engine fires concurrent `research retrieve` processes into one run
+    // The deep engine fires concurrent `recon retrieve` processes into one run
     // dir (e.g. Grok-X at t=0 alongside a Perplexity round). With multi-KB snippet
     // lines, an unguarded read-dedup-append would race: two writers could both miss
     // a source and double-append, or interleave a >PIPE_BUF line and corrupt the
@@ -239,7 +236,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!("research-test-{tag}-{nanos}"));
+        let dir = std::env::temp_dir().join(format!("recon-test-{tag}-{nanos}"));
         fs::create_dir_all(&dir).unwrap();
         dir
     }

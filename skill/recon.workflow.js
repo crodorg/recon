@@ -1,5 +1,5 @@
 export const meta = {
-  name: 'research-deep',
+  name: 'recon-deep',
   description: 'Iterative deep research: decompose into a wide query set, retrieve broad (Perplexity rounds + Grok-X at t=0), triage on excerpt, read the best survivors, close gaps, confirm the load-bearing claims, then synthesize a cited report and verify it. Wide-retrieve / selective-read; counts are disk-truthful.',
   phases: [
     { title: 'Decompose', detail: 'strategist: init run, 6-axis query set, gap model' },
@@ -16,7 +16,7 @@ const query = args.query
 const context = args.context || ''
 const profile = args.profile || 'general'
 const asOf = args.as_of || 'unknown'
-const SKILL_DIR = args.skill_dir || '__RESEARCH_SKILL_DIR__'
+const SKILL_DIR = args.skill_dir || '__RECON_SKILL_DIR__'
 
 // Primary-tracing read-discipline is DECOUPLED from social suppression: a
 // regulatory/health/finance-cored question can keep social ON (general/social
@@ -170,11 +170,11 @@ function shq(s) {
   return "'" + String(s).replace(/'/g, "'\\''") + "'"
 }
 
-// Build one `research retrieve` invocation from a query object. The Perplexity
+// Build one `recon retrieve` invocation from a query object. The Perplexity
 // key is substituted in-shell (never in args). domain/date/recency/excerpt-size
 // go to the native flags, never inline operators.
 function retrieveCmd(q, runDir, limit, sources) {
-  let cmd = `PERPLEXITY_API_KEY="${KEY}" research retrieve ${shq(q.text)}`
+  let cmd = `PERPLEXITY_API_KEY="${KEY}" recon retrieve ${shq(q.text)}`
     + ` --mode deep --sources ${sources} --limit ${limit} --run-dir ${shq(runDir)}`
   if (q.domains && q.domains.length) cmd += ` --domains ${shq(q.domains.join(','))}`
   // Perplexity rejects --recency combined with --after/--before and requires
@@ -206,7 +206,7 @@ First, read the query doctrine IN FULL and follow it: ${SKILL_DIR}/query-strateg
 
 Then do all of this:
 1. Create the run dir (prints {"run_dir":"..."} — capture the path):
-   research init-run ${shq(query)} --mode deep
+   recon init-run ${shq(query)} --mode deep
 2. Produce ${tier.r1} Round-1 Perplexity queries spread across the six axes (facet · entity+geo · time-window · primary-targeting · contrarian · data). MANDATORY floor: at least ONE contrarian/disconfirming query and at least ONE primary-source query (use the "domains" field to target .gov / filings / statute / primary domains). Write keyword strings + native filters, not natural-language questions (at most ONE scouting query may be NL). Push domain/date/recency into each query object's fields (domains / after MM/DD/YYYY / before / recency hour|day|week|month|year) — NEVER inline site:/filetype:. Set max_tokens_per_page to 1024 for broad queries, 4096 where a fat excerpt could itself yield shallow evidence.
 3. Produce ONE scout_query: a concise keyword string for the non-web connectors (X / HN / markets).
 4. Produce gap_model: 3-7 statements of "what must be true for the verdict to hold" — the things Rounds 2-3 exist to confirm. And verdict_question: the single sharpest framing of what we are deciding.
@@ -224,7 +224,7 @@ Each command prints JSON {run_dir,count,...} on success, or logs "source ... fai
 }
 
 function extraRetrievePrompt(scoutQuery, sources, runDir) {
-  const cmd = `research retrieve ${shq(scoutQuery)} --mode deep --sources ${sources} --limit 12 --run-dir ${shq(runDir)}`
+  const cmd = `recon retrieve ${shq(scoutQuery)} --mode deep --sources ${sources} --limit 12 --run-dir ${shq(runDir)}`
   return `You are a shell runner. Run EXACTLY this one command — it covers the non-web modalities (${sources}) concurrently with the web round. No Perplexity key is needed for these connectors. Grok-X can take 10-120s; wait for it to finish.
 
 ${cmd}
@@ -236,7 +236,7 @@ function triagePrompt(runDir, gapModel, verdictQ, cap, excludeIds, roundLabel) {
   return `You are the TRIAGE pass for ${roundLabel}. Job: from the candidate pool on disk, select the BEST ${cap} sources to read in full. Search was wide and cheap; reading is dear — so keep the read set small and earned.
 
 1. Get the pool from disk (disk-truthful — do NOT invent sources):
-   research list-sources --dir ${shq(runDir)}
+   recon list-sources --dir ${shq(runDir)}
    Returns {count, sources:[{source_id,raw_url,title,origin,date,score,recommendation,snippet}]} sorted by credibility. The "snippet" is a real page excerpt — use it to judge relevance and reject off-topic SECONDARY hits without fetching. EXCEPTION: never reject a SUBSTANTIVE primary for a blank/thin snippet — Perplexity returns an empty excerpt for PDFs and many .gov pages, so a missing snippet there means "no preview," not "off-topic" (see the primary read-floor below).
 ${excludeIds && excludeIds.length ? `2. EXCLUDE these already-read source_ids and triage only the rest: ${JSON.stringify(excludeIds)}\n` : ''}
 Score each remaining candidate on: credibility (the binary's score), source-type (prefer PRIMARY — .gov/.edu, statutes, filings, datasets, primary-doc PDFs — over blogs/marketing), and gap-relevance to the verdict question + gap model:
@@ -271,15 +271,15 @@ run_dir: ${runDir}
 
 Steps:
 1. web_fetch the URL. If it is unreachable/blocked (403, paywall, anti-bot, timeout) AND this source is a primary or load-bearing, recover IN THIS ORDER:
-   a. SCHOLARLY FULL TEXT (sci-hub) — only when this source is an academic paper carrying a DOI/PMID (origin openalex/crossref/pubmed, a doi.org / publisher URL, or a DOI/PMID visible in the URL or title). Fetch it: \`research fetch-paper ${shq(s.raw_url)} --out ${shq(runDir + '/fulltext')}\` (it accepts a doi.org URL, a bare DOI, or pmid:NNN). On {found:true}, read pdf_path (pdftotext / the pdf skill) and use THAT as the content; tag evidence "provenance":"scihub_fulltext". CITE THE DOI/publisher in the bibliography, NEVER the mirror — pdf_path/domain_used are local read artifacts only, never a Source URL. A miss ({found:false} — e.g. a 2022+ paper outside the corpus, which is frozen at 2021) is EXPECTED: do NOT retry or loop, fall through to (b). Do this only for THIS load-bearing source — never fan out fetch-paper across many DOIs.
+   a. SCHOLARLY FULL TEXT (sci-hub) — only when this source is an academic paper carrying a DOI/PMID (origin openalex/crossref/pubmed, a doi.org / publisher URL, or a DOI/PMID visible in the URL or title). Fetch it: \`recon fetch-paper ${shq(s.raw_url)} --out ${shq(runDir + '/fulltext')}\` (it accepts a doi.org URL, a bare DOI, or pmid:NNN). On {found:true}, read pdf_path (pdftotext / the pdf skill) and use THAT as the content; tag evidence "provenance":"scihub_fulltext". CITE THE DOI/publisher in the bibliography, NEVER the mirror — pdf_path/domain_used are local read artifacts only, never a Source URL. A miss ({found:false} — e.g. a 2022+ paper outside the corpus, which is frozen at 2021) is EXPECTED: do NOT retry or loop, fall through to (b). Do this only for THIS load-bearing source — never fan out fetch-paper across many DOIs.
    b. GROK FETCH — RETRY ONCE via Grok; its fetch infra reaches sources ours can't (old.reddit.com, some .gov/PDF hosts): run \`grok-ro -p "Fetch <URL> and return the full main text verbatim, no summary" --output-format plain --max-turns 4\`. Use the returned text as the content and tag any evidence drawn from it with "provenance":"grok_fetch".
    If the page is simply off-topic (you DID reach it, it just doesn't bear on the question), return reachable=false, evidence_count=0, inaccessible=false, no marker. If instead ALL recovery FAILED — no rung could obtain the text — on a source that MATTERED (a primary or load-bearing source, i.e. one you attempted recovery on above), return reachable=false, evidence_count=0, inaccessible=true, AND persist ONE gap marker so synthesis can't silently lose it — REGARDLESS of source type (not just academic papers). This is the ONLY non-quote row you ever write and it does NOT count toward evidence_count. Use the reason that fits:
-      a. academic paper, sci-hub MISS ({found:false} — paywalled AND outside the 2021 corpus): \`research add-evidence --dir ${shq(runDir)} --json '{"source_id":"${s.source_id}","quote":"[INACCESSIBLE — academic paper, full text paywalled and not retrievable: sci-hub miss (corpus frozen 2021) + Grok fetch failed; abstract/metadata only]","provenance":"inaccessible","evidence_type":"data_point"}'\`
-      b. any other primary (statute / filing / .gov / PDF / dataset that blocked every rung): \`research add-evidence --dir ${shq(runDir)} --json '{"source_id":"${s.source_id}","quote":"[INACCESSIBLE — primary source not readable: direct fetch blocked (403/paywall/anti-bot/timeout) + Grok fetch failed; not read]","provenance":"inaccessible","evidence_type":"data_point"}'\`
+      a. academic paper, sci-hub MISS ({found:false} — paywalled AND outside the 2021 corpus): \`recon add-evidence --dir ${shq(runDir)} --json '{"source_id":"${s.source_id}","quote":"[INACCESSIBLE — academic paper, full text paywalled and not retrievable: sci-hub miss (corpus frozen 2021) + Grok fetch failed; abstract/metadata only]","provenance":"inaccessible","evidence_type":"data_point"}'\`
+      b. any other primary (statute / filing / .gov / PDF / dataset that blocked every rung): \`recon add-evidence --dir ${shq(runDir)} --json '{"source_id":"${s.source_id}","quote":"[INACCESSIBLE — primary source not readable: direct fetch blocked (403/paywall/anti-bot/timeout) + Grok fetch failed; not read]","provenance":"inaccessible","evidence_type":"data_point"}'\`
    Say so in the summary. NEVER fabricate content.
 2. Extract 2-5 SHORT verbatim quotes (<=300 chars each) that directly bear on the question — facts, figures, findings, dates, named authorities, or clear positions. The quote field must be verbatim; no paraphrase.
 3. Persist each quote (the binary fills the id + timestamp; minimal JSON is correct):
-   research add-evidence --dir ${shq(runDir)} --json '{"source_id":"${s.source_id}","quote":"<verbatim>","locator":"<section/para/page or the URL>","provenance":"primary_fetch","evidence_type":"direct_quote"}'
+   recon add-evidence --dir ${shq(runDir)} --json '{"source_id":"${s.source_id}","quote":"<verbatim>","locator":"<section/para/page or the URL>","provenance":"primary_fetch","evidence_type":"direct_quote"}'
    Use single quotes around the JSON; if a quote contains a single quote, write the JSON to a temp file and pass it, or use printf — do not let shell quoting corrupt it.
 ${authNote}4. While reading, note leads and contradictions. For each lead that names a PRIMARY (bill number, docket, DOI, USC/CFR cite, EDGAR accession, dataset, official filing), format it as "PRIMARY: <identifier> — <why it matters>" so Round 2 can fetch that exact document directly; other follow-ups are plain strings. contradictions = claims here that conflict with another source or with the expected verdict.
 
@@ -293,7 +293,7 @@ run_dir: ${runDir}
 Verdict question: ${JSON.stringify(verdictQ)}
 Gap model: ${JSON.stringify(gapModel)}
 
-Read the substrate from disk: "research list-sources --dir ${shq(runDir)}" for sources, and read ${runDir}/evidence.jsonl for the extracted quotes. Consult the doctrine: ${SKILL_DIR}/query-strategy.md (sections 4 Round 2, 6 defenses, 7 stopping).
+Read the substrate from disk: "recon list-sources --dir ${shq(runDir)}" for sources, and read ${runDir}/evidence.jsonl for the extracted quotes. Consult the doctrine: ${SKILL_DIR}/query-strategy.md (sections 4 Round 2, 6 defenses, 7 stopping).
 
 Round-1 readers flagged these LEADS — turn every unfetched "PRIMARY:" lead into a Round-2 query that fetches the actual document (statute/filing/docket/DOI/dataset), NOT another blog about it:
 ${JSON.stringify(leads || [])}
@@ -312,7 +312,7 @@ function confirmPrompt(runDir, verdictQ) {
 
 run_dir: ${runDir}
 Verdict question: ${JSON.stringify(verdictQ)}
-Read the substrate: "research list-sources --dir ${shq(runDir)}" and ${runDir}/evidence.jsonl.
+Read the substrate: "recon list-sources --dir ${shq(runDir)}" and ${runDir}/evidence.jsonl.
 
 Identify the 3-6 claims the verdict most depends on — the ones that, if wrong, flip or gut the conclusion. For EACH, write narrow, specific queries that do BOTH:
  (a) CONFIRM the claim from a DIFFERENT, independent, high-credibility source than already used — ideally the primary itself; and
@@ -334,7 +334,7 @@ Verdict question: ${JSON.stringify(verdictQ)}
 Profile: ${profile}   Tier: ${tierName}   Research-as-of: ${asOf}
 Writing contract + quality-tier ladder + primary-source hierarchies: ${SKILL_DIR}/sources.md
 
-1. Read ${runDir}/sources.jsonl and ${runDir}/evidence.jsonl (use "research list-sources --dir ${shq(runDir)}" for the credibility-sorted view). Triangulate across sources and modalities (web / social / repos / markets). Surface conflicts; do not average them away. Any evidence row with "provenance":"excerpt" rests on a Perplexity excerpt, not a full fetch — treat it as weaker and NEVER as the sole basis for a load-bearing claim. Any row with "provenance":"inaccessible" is NOT evidence — it is a GAP MARKER for a load-bearing PRIMARY (an academic paper, OR a statute/filing/.gov/PDF/dataset) that NO fetch rung could read (direct + sci-hub-if-academic + Grok all failed); never cite it as support (handle per the INACCESSIBLE PRIMARIES rule below). If a whole retrieval modality (X/social, HN, markets) returned nothing usable, SAY SO explicitly in the report — no silent omission.
+1. Read ${runDir}/sources.jsonl and ${runDir}/evidence.jsonl (use "recon list-sources --dir ${shq(runDir)}" for the credibility-sorted view). Triangulate across sources and modalities (web / social / repos / markets). Surface conflicts; do not average them away. Any evidence row with "provenance":"excerpt" rests on a Perplexity excerpt, not a full fetch — treat it as weaker and NEVER as the sole basis for a load-bearing claim. Any row with "provenance":"inaccessible" is NOT evidence — it is a GAP MARKER for a load-bearing PRIMARY (an academic paper, OR a statute/filing/.gov/PDF/dataset) that NO fetch rung could read (direct + sci-hub-if-academic + Grok all failed); never cite it as support (handle per the INACCESSIBLE PRIMARIES rule below). If a whole retrieval modality (X/social, HN, markets) returned nothing usable, SAY SO explicitly in the report — no silent omission.
 2. Write a markdown report to ${runDir}/report.md per the writing contract in sources.md:
    - Lead with the verdict, then the reasoning. >=80% prose.
    - Immediate [N] citations at each claim; every [N] resolves to a real URL/DOI in a "## Bibliography" section (no ranges, no placeholders, no "various sources"). Label each source by quality tier and as primary / secondary / social.
@@ -344,19 +344,19 @@ Writing contract + quality-tier ladder + primary-source hierarchies: ${SKILL_DIR
    - CURRENCY: for every load-bearing legal/regulatory/health/finance claim, state its as-of-${asOf} validity (in force / amended / superseded / retracted / unconfirmed) and flag anything you could not confirm is still current.
    - Stamp the research-as-of date and add a short "what was and wasn't checked" note.
 3. Persist the report's load-bearing FACTUAL claims (minimal JSON; the binary fills ids/timestamps):
-   research add-claim --dir ${shq(runDir)} --json '{"section_id":"<section>","text":"<claim>","claim_type":"factual","cited_source_ids":["<real source_ids backing it>"]}'
+   recon add-claim --dir ${shq(runDir)} --json '{"section_id":"<section>","text":"<claim>","claim_type":"factual","cited_source_ids":["<real source_ids backing it>"]}'
 4. Verify and fix (up to 3 cycles):
-   research verify-support --dir ${shq(runDir)}
-   research verify-citations --dir ${shq(runDir)}
+   recon verify-support --dir ${shq(runDir)}
+   recon verify-citations --dir ${shq(runDir)}
    If a factual claim is unsupported, or a citation is suspicious/unverified, fix the report (or downgrade the claim's confidence with a stated reason) and re-run. If still failing after 3 cycles, list them under "## Limitations".
-5. Final disk counts: "research list-sources --dir ${shq(runDir)}" for the source count; claim_count via "wc -l < ${runDir}/claims.jsonl". For evidence_total report REAL evidence only — EXCLUDE the inaccessible gap markers — by counting non-marker rows:  grep -cv '"provenance":"inaccessible"' ${runDir}/evidence.jsonl  (the markers are surfaced via the INACCESSIBLE PRIMARIES note, not the evidence count).
+5. Final disk counts: "recon list-sources --dir ${shq(runDir)}" for the source count; claim_count via "wc -l < ${runDir}/claims.jsonl". For evidence_total report REAL evidence only — EXCLUDE the inaccessible gap markers — by counting non-marker rows:  grep -cv '"provenance":"inaccessible"' ${runDir}/evidence.jsonl  (the markers are surfaced via the INACCESSIBLE PRIMARIES note, not the evidence count).
 
 Return report_path, sources_total (disk), evidence_total (disk — real evidence only, excludes inaccessible markers), claim_count (disk), factual_unsupported (from verify-support), citation_issues (suspicious+unverified from verify-citations), limitations (array), remaining_gaps (array: the gaps STILL open AFTER synthesis — the report's "what wasn't checked" items, NOT the pre-round-2 gap model), summary (one line: the verdict + headline confidence).`
 }
 
 // ---- orchestration ----------------------------------------------------------
 phase('Decompose')
-log(`research-deep: tier ${tierName}, profile ${profile}, extra connectors [${extraSources.join(',') || 'none'}]${autoAddedReddit ? ' (reddit auto-added: social profile)' : ''}`)
+log(`recon-deep: tier ${tierName}, profile ${profile}, extra connectors [${extraSources.join(',') || 'none'}]${autoAddedReddit ? ' (reddit auto-added: social profile)' : ''}`)
 
 const decomp = await agent(decomposePrompt(), { schema: DECOMPOSE_SCHEMA, label: 'decompose', phase: 'Decompose' })
 if (!decomp || !decomp.run_dir) {

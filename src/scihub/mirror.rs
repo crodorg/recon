@@ -8,9 +8,9 @@
 //! if it coughs up a real PDF. The ones that do are live; the rest are dropped. The
 //! list curates itself.
 //!
-//! Seed = a compiled starting guess ∪ the operator's `~/.config/research/scihub.conf`
+//! Seed = a compiled starting guess ∪ the operator's `~/.config/recon/scihub.conf`
 //! (the real refresh lever when domains move). Cache lives at
-//! `~/.local/share/research/scihub-domains.json` and auto-refreshes past a TTL.
+//! `~/.local/share/recon/scihub-domains.json` and auto-refreshes past a TTL.
 
 use std::path::PathBuf;
 use std::time::Instant;
@@ -84,14 +84,14 @@ fn home() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
-/// `~/.local/share/research/scihub-domains.json` — same state root as run dirs.
+/// `~/.local/share/recon/scihub-domains.json` — same state root as run dirs.
 fn cache_path() -> PathBuf {
-    home().join(".local/share/research/scihub-domains.json")
+    home().join(".local/share/recon/scihub-domains.json")
 }
 
-/// `~/.config/research/scihub.conf` — same config dir as `trust.conf`.
+/// `~/.config/recon/scihub.conf` — same config dir as `trust.conf`.
 fn config_path() -> PathBuf {
-    home().join(".config/research/scihub.conf")
+    home().join(".config/recon/scihub.conf")
 }
 
 /// Seed hosts = operator config (one host per line, `#` comments) ∪ compiled

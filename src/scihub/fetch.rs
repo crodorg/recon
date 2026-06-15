@@ -241,7 +241,7 @@ pub async fn fetch_paper(input: &str, out_dir: &str, force_refresh: bool) -> Res
             Some(doi),
             pmid,
             tried,
-            "no live Sci-Hub domain found — add one to ~/.config/research/scihub.conf and re-run with --refresh",
+            "no live Sci-Hub domain found — add one to ~/.config/recon/scihub.conf and re-run with --refresh",
         ));
     }
 

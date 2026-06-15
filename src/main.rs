@@ -1,4 +1,4 @@
-//! research — terminal deep-research engine: retrieval + deterministic verification.
+//! recon — terminal deep-research engine: retrieval + deterministic verification.
 
 mod http;
 mod model;
@@ -22,7 +22,7 @@ use model::{
 
 #[derive(Parser)]
 #[command(
-    name = "research",
+    name = "recon",
     version,
     about = "Terminal deep-research engine: retrieval + deterministic verification"
 )]

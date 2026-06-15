@@ -1,6 +1,6 @@
-# research — source routing & hierarchies
+# recon — source routing & hierarchies
 
-The `research` binary owns retrieval; **this file is the map the skill uses to decide
+The `recon` binary owns retrieval; **this file is the map the skill uses to decide
 *which* connectors to fire and *how* to judge what comes back.** Routing is judgment, so
 it lives here (Claude reads it), not hard-coded in the binary. The binary just takes
 `--sources a,b,c`.
@@ -79,7 +79,7 @@ in quick mode, at least name where the primary source *is*.
     split — they surface the primary literature (DOIs, abstracts) that Perplexity's web breadth
     misses. OpenAlex = relevance discovery; Crossref = DOI/metadata authority + corroborator.
   - *Full text behind a paywall?* The deep read step **auto-fetches** it via Sci-Hub for any
-    load-bearing paywalled paper (`research fetch-paper <doi|pmid>`, corpus frozen at 2021) —
+    load-bearing paywalled paper (`recon fetch-paper <doi|pmid>`, corpus frozen at 2021) —
     a **reading aid only, cite the DOI, never the mirror**. Conservative: load-bearing papers
     only, no fan-out, 2022+ misses expected. Run it by hand for a one-off. See SKILL.md.
   - *Load-bearing primary you can't read in full?* **Surface the gap, don't bury it** — but aggregate.
@@ -122,7 +122,7 @@ conflict) / **Medium** (tier 3–5 or single strong source) / **Low** (tier 6–
 ## Trust config & heterodox sources
 
 The binary scores domain authority from a **neutral built-in tier list** plus an optional
-user override at `~/.config/research/trust.conf` (`[trusted]` → 90, `[independent]` → 60,
+user override at `~/.config/recon/trust.conf` (`[trusted]` → 90, `[independent]` → 60,
 `[distrusted]` → 20; subdomains match; most-skeptical tier wins). This is where the operator's
 curation lives — the published crate ships no one's worldview.
 

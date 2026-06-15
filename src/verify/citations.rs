@@ -19,7 +19,7 @@ const NET_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// HEAD requests pretend to be a browser, matching the Python verifier's UA so
 /// servers that reject the default crawler UA still answer.
-const URL_CHECK_UA: &str = "Mozilla/5.0 (Research Citation Verifier)";
+const URL_CHECK_UA: &str = "Mozilla/5.0 (Recon Citation Verifier)";
 
 pub async fn verify(
     client: &reqwest::Client,
