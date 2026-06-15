@@ -1,0 +1,32 @@
+# trust.conf.example
+#
+# Copy to ~/.config/research/trust.conf (or $XDG_CONFIG_HOME/research/trust.conf) to
+# override the built-in domain credibility tiers with your own curation.
+#
+# The compiled-in defaults are deliberately NEUTRAL — mainstream primary sources,
+# government/academic publishers, wire-service journalism. This file is where YOUR
+# worldview lives; it is never compiled into the binary, so the published crate stays
+# neutral and your trust map stays yours.
+#
+# Format (dead simple, no deps):
+#   [section] headers, one bare domain per line, '#' comments (full-line or inline),
+#   blank lines ignored. A domain also matches its subdomains (example.com matches
+#   blog.example.com).
+#
+# Sections and the score each assigns:
+#   [trusted]      -> 90  treat like a high-authority primary/peer source
+#   [independent]  -> 60  credible but not establishment; surfaces heterodox/self-published
+#                         voices WITHOUT auto-penalizing the platform (judge on merits)
+#   [distrusted]   -> 20  conspiracy / pseudoscience / known-unreliable: still surfaced so
+#                         synthesis can see the dissent, but bottom-ranked and never authority
+
+[trusted]
+# example.gov
+# your-preferred-primary-source.org
+
+[independent]
+# an-independent-outlet.example
+# a-writer-you-trust.substack.com
+
+[distrusted]
+# known-misinformation.example

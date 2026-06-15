@@ -1,0 +1,15 @@
+# scihub.conf.example
+#
+# Only relevant when the binary is built with `--features scihub` (off by default).
+#
+# Copy to ~/.config/research/scihub.conf to add extra Sci-Hub mirror hosts to probe.
+# Your hosts are merged with (and take priority over) the compiled-in seed list, then
+# each is live-probed with a canary DOI; only working hosts are cached and used.
+#
+# Format: one bare host per line, '#' comments. Scheme and slashes are stripped, so
+# both "https://sci-hub.xx/" and "sci-hub.xx" work. Domains rotate under legal
+# pressure — add a currently-working one here and run `research scihub-domains --refresh`.
+
+# sci-hub.se
+# sci-hub.st
+# sci-hub.ru

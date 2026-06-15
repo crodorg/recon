@@ -2,6 +2,7 @@
 
 mod http;
 mod model;
+#[cfg(feature = "scihub")]
 mod scihub;
 mod sources;
 mod store;
@@ -39,9 +40,8 @@ enum Command {
         /// Research mode (e.g. quick / deep).
         #[arg(long, default_value = "quick")]
         mode: String,
-        /// Comma-separated connector names. Social coverage is X via the `grok`
-        /// connector; there is no Reddit connector (direct Reddit is IP-blocked
-        /// without a third-party scraper, which we don't use).
+        /// Comma-separated connector names. Available: hn, github, polymarket,
+        /// perplexity, grok (X/social), reddit (via grok), openalex, crossref.
         #[arg(long, default_value = "hn,github,polymarket,grok,perplexity")]
         sources: String,
         /// Max hits per connector.
@@ -144,6 +144,7 @@ enum Command {
     /// Fetch a paper's full-text PDF from Sci-Hub by DOI or PMID. A reading aid,
     /// NOT a citation source — cite the DOI/publisher, never the mirror. Honest
     /// miss (`found:false`) when the paper isn't in the corpus (frozen at 2021).
+    #[cfg(feature = "scihub")]
     FetchPaper {
         /// DOI (`10.1038/171737a0`), a `doi.org/...` URL, or a PMID (`pmid:123` / `123`).
         id: String,
@@ -155,6 +156,7 @@ enum Command {
         refresh: bool,
     },
     /// Inspect or refresh the Sci-Hub live-domain mirror (probe-curated cache).
+    #[cfg(feature = "scihub")]
     ScihubDomains {
         /// Re-probe all seed/config domains and rewrite the cache.
         #[arg(long)]
@@ -210,7 +212,9 @@ async fn main() -> Result<()> {
         } => cmd_verify_citations(dir, report, strict).await,
         Command::VerifySupport { dir, strict } => cmd_verify_support(dir, strict),
         Command::Score { json } => cmd_score(json),
+        #[cfg(feature = "scihub")]
         Command::FetchPaper { id, out, refresh } => cmd_fetch_paper(id, out, refresh).await,
+        #[cfg(feature = "scihub")]
         Command::ScihubDomains { refresh } => cmd_scihub_domains(refresh).await,
     }
 }
@@ -222,6 +226,7 @@ async fn main() -> Result<()> {
 /// Fetch a paper PDF from Sci-Hub by DOI/PMID and print the JSON result. A miss
 /// is a valid answer (`found:false`), so this still exits 0 — the JSON is the
 /// contract.
+#[cfg(feature = "scihub")]
 async fn cmd_fetch_paper(id: String, out: Option<String>, refresh: bool) -> Result<()> {
     let out_dir = out.unwrap_or_else(|| ".".to_string());
     let result = scihub::fetch::fetch_paper(&id, &out_dir, refresh).await?;
@@ -231,6 +236,7 @@ async fn cmd_fetch_paper(id: String, out: Option<String>, refresh: bool) -> Resu
 
 /// Print the live-domain mirror; with `--refresh`, re-probe first. A read with no
 /// cache yet triggers a probe so the command always returns a real picture.
+#[cfg(feature = "scihub")]
 async fn cmd_scihub_domains(refresh: bool) -> Result<()> {
     let cache = if refresh {
         scihub::mirror::refresh().await?

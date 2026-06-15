@@ -15,6 +15,8 @@ pub fn client() -> reqwest::Client {
 
 /// Build a client with a custom timeout (seconds). PDF downloads can be a few MB
 /// and a domain probe should fail fast — neither fits the shared 20s default.
+/// Used only by the optional `scihub` feature.
+#[cfg(feature = "scihub")]
 pub fn client_timeout(secs: u64) -> reqwest::Client {
     reqwest::Client::builder()
         .user_agent(USER_AGENT)
@@ -40,6 +42,8 @@ pub async fn get_json(client: &reqwest::Client, url: &str) -> anyhow::Result<ser
 }
 
 /// GET a URL and return the body as text (HTML pages, etc.).
+/// Used only by the optional `scihub` feature.
+#[cfg(feature = "scihub")]
 pub async fn get_text(client: &reqwest::Client, url: &str) -> anyhow::Result<String> {
     let resp = client
         .get(url)

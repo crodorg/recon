@@ -3,6 +3,14 @@ name = "research"
 version = "0.1.0"
 edition = "2021"
 description = "Terminal deep-research engine: retrieval + deterministic verification substrate"
+license = "MIT"
+readme = "README.md"
+authors = ["Chris Rodriguez"]
+
+[features]
+# Sci-Hub full-text fetch is a reading aid only (cite the DOI, never the mirror) and
+# ships OFF by default — opt in with `cargo build --features scihub`. See README.
+scihub = []
 
 [[bin]]
 name = "research"
