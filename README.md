@@ -69,7 +69,8 @@ The tool is built to degrade, not break. Every row below is additive.
 |---|---|
 | **Nothing** | Hacker News + GitHub + Polymarket + local reading/synthesis. (Web breadth degrades to Claude's built-in web search.) |
 | `PERPLEXITY_API_KEY` | The core: broad web retrieval with ranked results + excerpts. ($5 / 1,000 search requests.) |
-| A local `grok` CLI (xAI SuperGrok) | X/Twitter **and** Reddit social search ($0 marginal on the subscription). Without it, social is skipped — cleanly, not fatally. *(An API-key fallback via `XAI_API_KEY` / `OPENROUTER_API_KEY` is on the roadmap so social works without the CLI.)* |
+| A local `grok` CLI (xAI SuperGrok) | X/Twitter **and** Reddit social search at $0 marginal — the preferred path when present (richest results). |
+| `XAI_API_KEY` *or* `OPENROUTER_API_KEY` | The same X/Reddit social search **without** the local CLI — via the xAI Responses API (`x_search`) or OpenRouter (paid per call). Used only when the `grok` CLI is absent; if neither key is set either, social is skipped cleanly. Model ids default to current Grok releases and are overridable with `RECON_XAI_MODEL` / `RECON_OPENROUTER_MODEL`. |
 | `OPENALEX_API_KEY` / `OPENALEX_MAILTO` / `CROSSREF_MAILTO` | Scholarly discovery (OpenAlex + Crossref). All optional; OpenAlex works keyless for light use. |
 | `--features scihub` build | A full-text **reading aid** for paywalled papers (cite the DOI, never the mirror). Off by default. |
 
@@ -80,6 +81,9 @@ major decisions; slow, full iterative verification). Override with `--quick` / `
 
 - **API keys** are read from the environment (e.g. `export PERPLEXITY_API_KEY=...`). Keep them in
   a secret manager and export at session start if you prefer.
+- **Social without the `grok` CLI** (optional): set `XAI_API_KEY` or `OPENROUTER_API_KEY` to get
+  X/Reddit search over the API instead. The default model ids track current Grok releases;
+  override with `RECON_XAI_MODEL` / `RECON_OPENROUTER_MODEL` if a call rejects the default.
 - **`trust.conf`** (`~/.config/recon/trust.conf`) lets you override the built-in domain
   credibility tiers with your own curation — `[trusted]` / `[independent]` / `[distrusted]`. The
   compiled defaults are deliberately neutral (mainstream primary sources); your worldview lives in
@@ -99,7 +103,7 @@ is retrieval: Perplexity's Search API is ~$5 per 1,000 requests (no token charge
 
 - Requires Claude Code; there is no standalone CLI report generator.
 - The source-routing table and credibility tiers reflect my judgment; tune them to yours.
-- Social currently needs the local `grok` CLI (API-key fallback is planned).
+- Social is best via the local `grok` CLI; without it, an `XAI_API_KEY` / `OPENROUTER_API_KEY` fallback covers X/Reddit (paid per call). With none of the three, social is skipped cleanly.
 - Reddit coverage rides on Grok and can be patchy.
 - This is a personal tool shared as-is — issues and PRs welcome, but support is best-effort.
 

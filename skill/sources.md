@@ -148,8 +148,8 @@ stderr and is skipped — it never crashes the run.
 | name | modality | cost | notes |
 |---|---|---|---|
 | `perplexity` | web breadth (ranked results) | $5 / 1k requests, no tokens | needs `PERPLEXITY_API_KEY`; returns title/url/snippet/last_updated |
-| `grok` | X/Twitter + web (social) | $0 marginal (SuperGrok sub) | shells out to the `grok` CLI; ~10–120s; origin `grok-x` |
-| `reddit` | Reddit (human opinion / niche / local) | $0 marginal (SuperGrok sub) | shells to the `grok` CLI via `old.reddit.com` + PullPush; ~10–120s; origin `grok-reddit`; tier 7-8 |
+| `grok` | X/Twitter + web (social) | $0 on the CLI; paid via API | prefers the local `grok` CLI; else `XAI_API_KEY` (xAI `x_search`) or `OPENROUTER_API_KEY`; else skipped. ~10–120s; origin `grok-x` |
+| `reddit` | Reddit (human opinion / niche / local) | $0 on the CLI; paid via API | same Grok transports as `grok`, via `old.reddit.com` + PullPush; ~10–120s; origin `grok-reddit`; tier 7-8 |
 | `github` | repos | free (higher limit with `GITHUB_TOKEN`) | **repo-name/description search — feed it keywords, not a sentence** |
 | `hn` | Hacker News (Algolia) | free | tech/startup discussion; carries points + comments |
 | `polymarket` | prediction markets | free | gamma API, no full-text search → client-side filter; best-effort |

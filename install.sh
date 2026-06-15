@@ -55,8 +55,9 @@ cat <<EOF
 Done. Next steps:
   * Ensure $BIN_DIR is on your PATH.
   * Export PERPLEXITY_API_KEY for web breadth (the core connector).
-  * Optional: a local 'grok' CLI (xAI SuperGrok) enables X/Reddit social search;
-             OPENALEX_API_KEY / *_MAILTO for scholarly discovery.
+  * Optional, for X/Reddit social search: a local 'grok' CLI (xAI SuperGrok, \$0
+             marginal) OR an XAI_API_KEY / OPENROUTER_API_KEY fallback (paid per call).
+  * Optional: OPENALEX_API_KEY / *_MAILTO for scholarly discovery.
   * In Claude Code, run:  /recon <your question>
 
 The free connectors (HN, GitHub, Polymarket) and local synthesis work with no keys.

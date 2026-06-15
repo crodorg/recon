@@ -1,12 +1,20 @@
-//! X/Twitter + web connector backed by the local agentic `grok` CLI.
+//! X/Twitter + Reddit + web social connector backed by Grok.
 //!
-//! Auth is the operator's SuperGrok subscription wired into `~/.local/bin/grok`
-//! (no API key / env var). We run a single non-interactive turn-limited prompt
-//! asking Grok to search X (via its `x_keyword_search` / `x_semantic_search` /
-//! `web_search` tools) and emit a STRICT JSON array of `{text,author,url,date}`.
-//! Grok sometimes wraps prose around that array, so we extract the LAST balanced
-//! JSON array in stdout and parse it. The whole call is wrapped in a hard
-//! timeout; failure/timeout surfaces as `Err` with detail.
+//! Three transports, tried in order of preference — all run the SAME prompt
+//! ("search, then emit a STRICT JSON array of `{text,author,url,date}`"), so the
+//! output parses identically regardless of how we reached Grok:
+//!
+//! 1. the local agentic `grok` CLI (`~/.local/bin/grok`), if installed — the
+//!    operator's SuperGrok subscription: $0 marginal, richest results;
+//! 2. else the xAI Responses API (`XAI_API_KEY`) with the `x_search` +
+//!    `web_search` server tools;
+//! 3. else OpenRouter (`OPENROUTER_API_KEY`) chat-completions with web/X search.
+//!
+//! With no CLI and no key, social degrades to a logged skip (empty result) so a
+//! public install still runs on web + free sources. Grok often wraps prose around
+//! the array, so we extract the LAST balanced JSON array and parse it. Each call
+//! is wrapped in a hard timeout. API model ids are overridable via
+//! `RECON_XAI_MODEL` / `RECON_OPENROUTER_MODEL` (model names move over time).
 
 use crate::model::{Candidate, SourceType};
 use reqwest::Client;
@@ -43,14 +51,11 @@ struct Row {
     date: Option<String>,
 }
 
-/// Search X/Twitter + web via the agentic grok CLI.
-///
-/// `client` is unused (we shell out, not HTTP); kept to honor the frozen
-/// connector signature.
+/// Search X/Twitter + web via Grok (CLI → xAI API → OpenRouter → graceful skip).
 pub async fn search(client: &Client, query: &str, limit: usize) -> anyhow::Result<Vec<Candidate>> {
-    let _ = client;
     let want = if limit == 0 { 10 } else { limit };
     run_grok(
+        client,
         &build_prompt(query, want),
         want,
         "grok-x",
@@ -69,9 +74,9 @@ pub async fn search_reddit(
     query: &str,
     limit: usize,
 ) -> anyhow::Result<Vec<Candidate>> {
-    let _ = client;
     let want = if limit == 0 { 10 } else { limit };
     run_grok(
+        client,
         &build_reddit_prompt(query, want),
         want,
         "grok-reddit",
@@ -81,21 +86,39 @@ pub async fn search_reddit(
     .await
 }
 
-/// Run one non-interactive, turn-limited grok prompt; parse the last JSON array of
-/// rows from stdout; map up to `want` non-empty rows to Candidates tagged with
+/// Orchestrate one social search across the transport ladder (CLI → xAI →
+/// OpenRouter → skip), then parse the resulting text into Candidates tagged with
 /// `origin` (`url_fallback` is used when a row omits its URL). Shared by the X and
 /// Reddit entry points — they differ only in prompt, origin, and URL fallback.
 async fn run_grok(
+    client: &Client,
     prompt: &str,
     want: usize,
     origin: &str,
     url_fallback: &str,
     run_timeout: Duration,
 ) -> anyhow::Result<Vec<Candidate>> {
+    let text = if grok_bin().exists() {
+        run_cli(prompt, run_timeout).await?
+    } else if let Some(key) = env_nonempty("XAI_API_KEY") {
+        run_xai(client, prompt, &key, run_timeout).await?
+    } else if let Some(key) = env_nonempty("OPENROUTER_API_KEY") {
+        run_openrouter(client, prompt, &key, run_timeout).await?
+    } else {
+        eprintln!(
+            "[recon] social {origin} skipped: no `grok` CLI at {} and neither \
+             XAI_API_KEY nor OPENROUTER_API_KEY is set",
+            grok_bin().display()
+        );
+        return Ok(Vec::new());
+    };
+    rows_to_candidates(&text, want, origin, url_fallback)
+}
+
+/// Run the local agentic `grok` CLI once (non-interactive, turn-limited) and
+/// return its stdout. The caller extracts the JSON array from it.
+async fn run_cli(prompt: &str, run_timeout: Duration) -> anyhow::Result<String> {
     let grok = grok_bin();
-    if !grok.exists() {
-        anyhow::bail!("grok CLI not found at {}", grok.display());
-    }
 
     // NOTE: deliberately NO --sandbox off / --always-approve / --permission-mode
     // bypassPermissions. Default permission mode is used; grok's built-in search
@@ -129,11 +152,23 @@ async fn run_grok(
         );
     }
 
-    let rows = extract_last_json_array(&stdout).ok_or_else(|| {
+    Ok(stdout.into_owned())
+}
+
+/// Parse the last JSON array of rows from `text` and map up to `want` non-empty
+/// rows to Candidates. Shared by all three transports (the CLI, xAI, and
+/// OpenRouter all produce the same `{text,author,url,date}` array).
+fn rows_to_candidates(
+    text: &str,
+    want: usize,
+    origin: &str,
+    url_fallback: &str,
+) -> anyhow::Result<Vec<Candidate>> {
+    let rows = extract_last_json_array(text).ok_or_else(|| {
         anyhow::anyhow!(
-            "no parseable JSON array in grok output (stdout {} bytes): {}",
-            stdout.len(),
-            truncate(stdout.trim(), 500)
+            "no parseable JSON array in {origin} output ({} bytes): {}",
+            text.len(),
+            truncate(text.trim(), 500)
         )
     })?;
 
@@ -155,6 +190,181 @@ fn grok_bin() -> std::path::PathBuf {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::path::PathBuf::from("."));
     home.join(GROK_REL_PATH)
+}
+
+/// Env var value if set AND non-empty (trimmed), else None.
+fn env_nonempty(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+}
+
+/// xAI Responses-API model id. Override with `RECON_XAI_MODEL`. Model names move,
+/// so the default is best-effort current; set the env var if a call 404s on it.
+fn xai_model() -> String {
+    env_nonempty("RECON_XAI_MODEL").unwrap_or_else(|| "grok-4".to_string())
+}
+
+/// OpenRouter model slug. The `:online` suffix turns on web search; for xAI Grok
+/// models OpenRouter auto-adds `x_search`. Override with `RECON_OPENROUTER_MODEL`.
+fn openrouter_model() -> String {
+    env_nonempty("RECON_OPENROUTER_MODEL").unwrap_or_else(|| "x-ai/grok-4-fast:online".to_string())
+}
+
+/// Call the xAI Responses API (`/v1/responses`) with the X-search + web-search
+/// server tools, and return the model's output text (which carries the JSON
+/// array). The model does the agentic search server-side within this one call.
+async fn run_xai(
+    client: &Client,
+    prompt: &str,
+    key: &str,
+    run_timeout: Duration,
+) -> anyhow::Result<String> {
+    let body = serde_json::json!({
+        "model": xai_model(),
+        "input": prompt,
+        "tools": [{ "type": "x_search" }, { "type": "web_search" }],
+    });
+    let fut = client
+        .post("https://api.x.ai/v1/responses")
+        .bearer_auth(key)
+        .json(&body)
+        .send();
+    let resp = match timeout(run_timeout, fut).await {
+        Ok(Ok(r)) => r,
+        Ok(Err(e)) => anyhow::bail!("xAI request failed: {e}"),
+        Err(_) => anyhow::bail!("xAI request timed out after {}s", run_timeout.as_secs()),
+    };
+    let status = resp.status();
+    let raw = resp.text().await.unwrap_or_default();
+    if !status.is_success() {
+        anyhow::bail!("xAI API returned {}: {}", status, truncate(&raw, 500));
+    }
+    let parsed: XaiResponse = serde_json::from_str(&raw)
+        .map_err(|e| anyhow::anyhow!("xAI response parse error: {e}: {}", truncate(&raw, 300)))?;
+    Ok(parsed.output_text())
+}
+
+/// Call OpenRouter chat-completions (`/api/v1/chat/completions`) with web/X
+/// search enabled (the `:online` model suffix), and return the assistant message
+/// content (which carries the JSON array).
+async fn run_openrouter(
+    client: &Client,
+    prompt: &str,
+    key: &str,
+    run_timeout: Duration,
+) -> anyhow::Result<String> {
+    let body = serde_json::json!({
+        "model": openrouter_model(),
+        "messages": [{ "role": "user", "content": prompt }],
+    });
+    let fut = client
+        .post("https://openrouter.ai/api/v1/chat/completions")
+        .bearer_auth(key)
+        .json(&body)
+        .send();
+    let resp = match timeout(run_timeout, fut).await {
+        Ok(Ok(r)) => r,
+        Ok(Err(e)) => anyhow::bail!("OpenRouter request failed: {e}"),
+        Err(_) => anyhow::bail!(
+            "OpenRouter request timed out after {}s",
+            run_timeout.as_secs()
+        ),
+    };
+    let status = resp.status();
+    let raw = resp.text().await.unwrap_or_default();
+    if !status.is_success() {
+        anyhow::bail!(
+            "OpenRouter API returned {}: {}",
+            status,
+            truncate(&raw, 500)
+        );
+    }
+    let parsed: OpenRouterResponse = serde_json::from_str(&raw).map_err(|e| {
+        anyhow::anyhow!(
+            "OpenRouter response parse error: {e}: {}",
+            truncate(&raw, 300)
+        )
+    })?;
+    parsed
+        .content()
+        .ok_or_else(|| anyhow::anyhow!("OpenRouter response had no message content"))
+}
+
+/// Minimal view of an xAI Responses-API reply: the output items' text, plus an
+/// optional flattened `output_text` convenience field if the server includes one.
+#[derive(serde::Deserialize)]
+struct XaiResponse {
+    #[serde(default)]
+    output: Vec<XaiOutputItem>,
+    #[serde(default)]
+    output_text: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct XaiOutputItem {
+    #[serde(default)]
+    content: Vec<XaiContent>,
+}
+
+#[derive(serde::Deserialize)]
+struct XaiContent {
+    #[serde(default)]
+    text: String,
+}
+
+impl XaiResponse {
+    /// Concatenate the model's text output (the convenience field wins if present).
+    fn output_text(&self) -> String {
+        if let Some(t) = &self.output_text {
+            if !t.trim().is_empty() {
+                return t.clone();
+            }
+        }
+        let mut s = String::new();
+        for item in &self.output {
+            for c in &item.content {
+                if c.text.is_empty() {
+                    continue;
+                }
+                if !s.is_empty() {
+                    s.push('\n');
+                }
+                s.push_str(&c.text);
+            }
+        }
+        s
+    }
+}
+
+/// Minimal view of an OpenAI-compatible chat-completions reply (OpenRouter).
+#[derive(serde::Deserialize)]
+struct OpenRouterResponse {
+    #[serde(default)]
+    choices: Vec<OpenRouterChoice>,
+}
+
+#[derive(serde::Deserialize)]
+struct OpenRouterChoice {
+    #[serde(default)]
+    message: OpenRouterMessage,
+}
+
+#[derive(serde::Deserialize, Default)]
+struct OpenRouterMessage {
+    #[serde(default)]
+    content: String,
+}
+
+impl OpenRouterResponse {
+    /// The first choice's message content, if non-empty.
+    fn content(&self) -> Option<String> {
+        self.choices
+            .first()
+            .map(|c| c.message.content.clone())
+            .filter(|s| !s.is_empty())
+    }
 }
 
 /// The instruction handed to Grok. Tight and explicit so the agent returns a
@@ -409,5 +619,41 @@ mod tests {
     #[test]
     fn no_array_returns_none() {
         assert!(extract_last_json_array("just prose, no json here").is_none());
+    }
+
+    #[test]
+    fn xai_response_text_extracted_then_parsed() {
+        // Responses-API shape: output[].content[].text carries the JSON array.
+        let raw = r#"{"output":[{"content":[{"type":"output_text","text":"Found these:\n[{\"text\":\"hi\",\"author\":\"@a\",\"url\":\"https://x.com/1\",\"date\":\"2026-01-01\"}]"}]}]}"#;
+        let parsed: XaiResponse = serde_json::from_str(raw).expect("parse xai");
+        let rows = extract_last_json_array(&parsed.output_text()).expect("rows");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].author, "@a");
+    }
+
+    #[test]
+    fn xai_response_uses_convenience_output_text() {
+        let raw = r#"{"output":[],"output_text":"[{\"text\":\"x\",\"author\":\"a\",\"url\":\"u\",\"date\":null}]"}"#;
+        let parsed: XaiResponse = serde_json::from_str(raw).expect("parse xai");
+        assert!(extract_last_json_array(&parsed.output_text()).is_some());
+    }
+
+    #[test]
+    fn openrouter_message_content_extracted_then_parsed() {
+        // OpenAI-compatible shape: choices[0].message.content carries the array.
+        let raw = r#"{"choices":[{"message":{"role":"assistant","content":"sure:\n[{\"text\":\"yo\",\"author\":\"b\",\"url\":\"u\",\"date\":null}]","annotations":[]}}]}"#;
+        let parsed: OpenRouterResponse = serde_json::from_str(raw).expect("parse or");
+        let content = parsed.content().expect("content");
+        let rows = extract_last_json_array(&content).expect("rows");
+        assert_eq!(rows[0].text, "yo");
+    }
+
+    #[test]
+    fn rows_to_candidates_maps_and_caps() {
+        let text = r#"[{"text":"one","author":"a","url":"https://x.com/1","date":null},
+                      {"text":"two","author":"b","url":"https://x.com/2","date":null}]"#;
+        let out = rows_to_candidates(text, 1, "grok-x", "https://x.com").expect("ok");
+        assert_eq!(out.len(), 1, "want=1 caps the result");
+        assert_eq!(out[0].origin, "grok-x");
     }
 }
