@@ -48,7 +48,7 @@ reasoning layer.
 ## Install
 
 ```sh
-git clone <this-repo> recon && cd recon
+git clone https://github.com/crodorg/recon && cd recon
 ./install.sh                      # default build (Sci-Hub OFF)
 # or: ./install.sh --features scihub   # opt into the Sci-Hub full-text reading aid
 ```
