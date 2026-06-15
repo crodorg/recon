@@ -663,7 +663,7 @@ fn parse_bib_line(line: &str) -> Option<CitationEntry> {
     // year: first standalone, plausible 4-digit token (optionally parenthesized).
     // Strip surrounding punctuation, then require EXACTLY four contiguous digits in
     // a sane range — so URL/article ids ("Article 2326") and grouped figures
-    // ("6,472 hoteliers") stay in the title instead of being mistaken for a year.
+    // ("6,472 households") stay in the title instead of being mistaken for a year.
     let current_year: i64 = chrono::Local::now()
         .format("%Y")
         .to_string()
@@ -816,21 +816,21 @@ mod tests {
     // year; it stays in the title, and the year is left unset (no real year here).
     #[test]
     fn article_id_in_title_is_not_a_year() {
-        let line = "2. Airbnb Help Center, Article 2326, \"Occupancy tax in Puerto Rico.\" https://www.airbnb.co.nz/help/article/2326 — Tier 4, primary.";
+        let line = "2. Airbnb Help Center, Article 2326, \"How occupancy taxes work for hosts.\" https://www.airbnb.com/help/article/2326 — Tier 4, primary.";
         let e = parse_bib_line(line).expect("entry");
         assert_eq!(e.num.as_deref(), Some("2"));
         assert_eq!(e.year, None, "article id 2326 must not be parsed as a year");
         assert!(e.title.as_deref().unwrap().contains("Article 2326"));
     }
 
-    // A grouped figure ("6,472 hoteliers") must NOT be read as the year; the real
+    // A grouped figure ("6,472 households") must NOT be read as the year; the real
     // parenthesized year ("(summer 2024)") later in the line is the one extracted.
     #[test]
     fn grouped_figure_is_not_a_year_and_real_year_wins() {
-        let line = "41. CPI — 6,472 hoteliers / 11,398 rooms (summer 2024). https://example.org/a";
+        let line = "41. Census report — 6,472 households / 11,398 residents (summer 2024). https://example.org/a";
         let e = parse_bib_line(line).expect("entry");
         assert_eq!(e.year.as_deref(), Some("2024"));
-        assert!(e.title.as_deref().unwrap().contains("6,472 hoteliers"));
+        assert!(e.title.as_deref().unwrap().contains("6,472 households"));
     }
 
     // A plain parenthesized year is still extracted and stripped from the title.

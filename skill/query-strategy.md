@@ -19,7 +19,7 @@ string (the API has real fields for this; inline operators are unreliable).
 
 **Decompose into specific, scoped sub-questions. Never fire "research everything about X."** A
 broad query returns the SEO consensus — the same ten blog posts everyone else gets. A *specific*
-query ("does PR Act 272 require a host to file room tax when the platform already remits it") drags
+query ("does a marketplace seller still owe sales tax in Texas when the platform already remits under the marketplace facilitator law") drags
 up the page that actually answers it. Specificity is what separates this from a search box.
 
 Front-load what you already know. The skill hands the strategist the question **plus the known
@@ -38,7 +38,7 @@ gap stages can see what's covered and what's thin.
    decomposes into market size, regulatory forcing function, competition, willingness-to-pay,
    distribution. One query per load-bearing facet.
 2. **Named-entity + geography** — pin the actual statutes, agencies, companies, places, people, bill
-   numbers. "Puerto Rico Act 272 room tax innkeeper registration" beats "PR rental tax rules." Names
+   numbers. "Texas marketplace facilitator sales tax permit requirement" beats "online sales tax rules." Names
    are how you reach primary sources.
 3. **Time-window** — when recency matters, bound it. Use `--recency month` for fast-moving topics, or
    `--after 01/01/2025` to exclude stale consensus. Pair a "current state" query with a "what changed
@@ -68,9 +68,9 @@ gap stages can see what's covered and what's thin.
 Search engines rank on **keyword overlap and entities**, not grammar. Write queries the way a
 librarian would, not the way you'd ask a person.
 
-- **Keyword strings, not natural-language questions.** `Puerto Rico Act 272 room tax host filing
-  obligation platform remittance` — not "Do hosts in Puerto Rico have to file room tax if the
-  platform already collects it?" The bag of entities is what matters.
+- **Keyword strings, not natural-language questions.** `Texas marketplace facilitator sales tax
+  seller filing obligation remittance threshold` — not "Do online sellers in Texas have to file
+  sales tax if the marketplace already collects it?" The bag of entities is what matters.
 - **One natural-language "scouting" query is allowed** per decomposition — a single broad NL query to
   see what the landscape looks like and harvest vocabulary (the real statute names, the agency, the
   terms of art) for the operator-heavy queries that follow. After that, go specific.
@@ -114,15 +114,15 @@ Each query is an object the workflow turns into one `research retrieve` invocati
 
 ```
 {
-  "text":    "Puerto Rico Act 272 room tax innkeeper registration requirements",
+  "text":    "Texas marketplace facilitator sales tax permit registration requirements",
   "axis":    "primary-targeting",          // one of the six axes
-  "domains": ["hacienda.pr.gov","tourism.pr.gov"],  // → --domains (optional)
+  "domains": ["comptroller.texas.gov"],    // → --domains (optional)
   "after":   "01/01/2024",                 // → --after  (optional, MM/DD/YYYY)
   "before":  null,                          // → --before (optional)
   "recency": null,                          // → --recency (optional)
   "max_tokens_per_page": 1024,             // 1024 for broad/triage; 4096 when the
                                             // excerpt should yield shallow evidence
-  "rationale": "trace the host filing duty to the actual room-tax statute"
+  "rationale": "trace the seller filing duty to the actual marketplace facilitator statute"
 }
 ```
 
