@@ -26,7 +26,7 @@ const tracePrimary = args.trace_primary === true || profile === 'authoritative'
 
 // The Perplexity key is read from the PERPLEXITY_API_KEY environment variable and passed
 // through to each retrieve command's own process (never embedded in args/logs). Users who
-// keep secrets in a manager can export it before launching, e.g. from `pass`/1Password/etc.
+// keep secrets in a manager can have it export the variable before launching.
 const KEY = '${PERPLEXITY_API_KEY}'
 
 // Connectors other than Perplexity, derived from the skill's routing split. These

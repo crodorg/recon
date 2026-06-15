@@ -23,8 +23,7 @@ connector choice.
 1. **Key.** Perplexity reads `PERPLEXITY_API_KEY` from the environment. Make sure it's set
    for this session:
    ```sh
-   PPLX="${PERPLEXITY_API_KEY}"   # export it in your shell, or wire your own secret manager,
-                                  # e.g. PPLX="${PERPLEXITY_API_KEY:-$(pass show api/perplexity/key 2>/dev/null)}"
+   PPLX="${PERPLEXITY_API_KEY}"   # export it in your shell, or have your secret manager set it
    ```
    Prefix every `research retrieve` with `PERPLEXITY_API_KEY="$PPLX"`. If it's empty, tell
    the user to export the key, and offer to proceed keyless (Perplexity drops out; Grok/X +
