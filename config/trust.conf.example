@@ -1,6 +1,6 @@
 # trust.conf.example
 #
-# Copy to ~/.config/research/trust.conf (or $XDG_CONFIG_HOME/research/trust.conf) to
+# Copy to ~/.config/recon/trust.conf (or $XDG_CONFIG_HOME/recon/trust.conf) to
 # override the built-in domain credibility tiers with your own curation.
 #
 # The compiled-in defaults are deliberately NEUTRAL — mainstream primary sources,
