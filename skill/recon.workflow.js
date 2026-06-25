@@ -12,17 +12,22 @@ export const meta = {
 
 // ---- inputs (from SKILL.md Step 4) ------------------------------------------
 // { query, context, profile, tier, fast_sources, slow_sources, mode, as_of, skill_dir }
-const query = args.query
-const context = args.context || ''
-const profile = args.profile || 'general'
-const asOf = args.as_of || 'unknown'
-const SKILL_DIR = args.skill_dir || '__RECON_SKILL_DIR__'
+// The Workflow runtime may hand `args` to the script as a JSON *string* rather than a parsed
+// object; normalize to an object so `args.query` resolves either way (otherwise every input
+// reads undefined and the run decomposes the literal query "undefined"). `args` can be a
+// read-only global, so parse into a local `A` instead of reassigning it.
+const A = (typeof args === 'string') ? JSON.parse(args) : (args || {})
+const query = A.query
+const context = A.context || ''
+const profile = A.profile || 'general'
+const asOf = A.as_of || 'unknown'
+const SKILL_DIR = A.skill_dir || '__RECON_SKILL_DIR__'
 
 // Primary-tracing read-discipline is DECOUPLED from social suppression: a
 // regulatory/health/finance-cored question can keep social ON (general/social
 // profile) yet still demand statutes/filings/datasets be traced to the primary.
 // The skill sets trace_primary for those; an authoritative profile always implies it.
-const tracePrimary = args.trace_primary === true || profile === 'authoritative'
+const tracePrimary = A.trace_primary === true || profile === 'authoritative'
 
 // The Perplexity key is read from the PERPLEXITY_API_KEY environment variable and passed
 // through to each retrieve command's own process (never embedded in args/logs). Users who
@@ -32,9 +37,9 @@ const KEY = '${PERPLEXITY_API_KEY}'
 // Connectors other than Perplexity, derived from the skill's routing split. These
 // fire once on the scout query, concurrently with the Perplexity Round-1 loop
 // (Grok-X at t=0). register_source locks, so the concurrent append is safe.
-const fastExtra = (args.fast_sources || 'perplexity')
+const fastExtra = (A.fast_sources || 'perplexity')
   .split(',').map((s) => s.trim().toLowerCase()).filter((s) => s && s !== 'perplexity')
-const slow = (args.slow_sources || '')
+const slow = (A.slow_sources || '')
   .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
 const extraSources = Array.from(new Set([...fastExtra, ...slow]))
 // Routing guard (added 2026-06-11 after a live run silently lost Reddit): a SOCIAL profile
@@ -52,7 +57,7 @@ const TIERS = {
   standard: { r1: 9,  r2: 6, r3: 6, r1lim: 15, r2lim: 12, r3lim: 8, r1read: 9,  r2read: 4, r3read: 2, hardCap: 20 },
   max:      { r1: 13, r2: 9, r3: 9, r1lim: 18, r2lim: 12, r3lim: 8, r1read: 14, r2read: 7, r3read: 3, hardCap: 40 },
 }
-const tierName = args.tier && TIERS[args.tier] ? args.tier : (args.mode === 'quick' ? 'quick' : 'standard')
+const tierName = A.tier && TIERS[A.tier] ? A.tier : (A.mode === 'quick' ? 'quick' : 'standard')
 const tier = TIERS[tierName]
 
 // ---- schemas ----------------------------------------------------------------
