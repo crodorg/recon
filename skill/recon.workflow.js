@@ -23,6 +23,14 @@ const profile = A.profile || 'general'
 const asOf = A.as_of || 'unknown'
 const SKILL_DIR = A.skill_dir || '__RECON_SKILL_DIR__'
 
+// Fail fast on an empty query. The args normalization above closes the string-or-object case, but
+// anything else that leaves query empty (a caller omitting `query`, a future regression) would
+// otherwise spawn the strategist and decompose the literal string "undefined" — the exact
+// full-run, ~230k-token waste that triggered the args fix. Bail in ms, before any agent runs.
+if (!query || !String(query).trim()) {
+  return { error: 'recon-deep: empty query (args.query missing — args may have arrived unparsed or without a query field)', run_dir: null }
+}
+
 // Primary-tracing read-discipline is DECOUPLED from social suppression: a
 // regulatory/health/finance-cored question can keep social ON (general/social
 // profile) yet still demand statutes/filings/datasets be traced to the primary.
