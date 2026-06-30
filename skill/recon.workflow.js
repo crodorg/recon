@@ -385,22 +385,22 @@ log(`run ${runDir} — ${r1Queries.length} R1 queries, gap-model ${gaps.length} 
 phase('Round 1')
 const r1Thunks = [
   () => agent(retrieveLoopPrompt(r1Queries, runDir, tier.r1lim, 'Round 1'),
-    { schema: RUN_SCHEMA, label: 'retrieve:pplx-r1', phase: 'Round 1' }),
+    { schema: RUN_SCHEMA, label: 'retrieve:pplx-r1', phase: 'Round 1', model: 'haiku' }),
 ]
 if (extraSources.length) {
   r1Thunks.push(() => agent(extraRetrievePrompt(decomp.scout_query || query, extraSources.join(','), runDir),
-    { schema: RUN_SCHEMA, label: `retrieve:${extraSources.join('+')}`, phase: 'Round 1' }))
+    { schema: RUN_SCHEMA, label: `retrieve:${extraSources.join('+')}`, phase: 'Round 1', model: 'haiku' }))
 }
 await parallel(r1Thunks)
 
 const tri1 = await agent(triagePrompt(runDir, gaps, verdictQ, tier.r1read, [], 'Round 1'),
-  { schema: TRIAGE_SCHEMA, label: 'triage:r1', phase: 'Round 1' })
+  { schema: TRIAGE_SCHEMA, label: 'triage:r1', phase: 'Round 1', model: 'sonnet' })
 const sel1 = tri1 && tri1.selected ? tri1.selected : []
 log(`Round 1 triage: ${sel1.length} selected to read (dropped ${tri1 ? tri1.dropped : '?'}) — ${tri1 ? tri1.notes || '' : ''}`)
 
 const readIds = new Set(sel1.map((s) => s.source_id))
 const reads1 = (await parallel(sel1.map((s) => () =>
-  agent(readPrompt(s, runDir, verdictQ), { schema: READ_SCHEMA, label: `read:${s.origin || 'src'}`, phase: 'Round 1' })
+  agent(readPrompt(s, runDir, verdictQ), { schema: READ_SCHEMA, label: `read:${s.origin || 'src'}`, phase: 'Round 1', model: 'sonnet' })
 ))).filter(Boolean)
 let totalReachable = reads1.filter((r) => r.reachable).length
 let inaccessibleCount = reads1.filter((r) => r.inaccessible).length
@@ -422,13 +422,13 @@ if (tier.r2 > 0) {
     if (gap.should_continue !== false && r2Queries.length) {
       r2qCount = r2Queries.length
       await agent(retrieveLoopPrompt(r2Queries, runDir, tier.r2lim, 'Round 2'),
-        { schema: RUN_SCHEMA, label: 'retrieve:pplx-r2', phase: 'Round 2' })
+        { schema: RUN_SCHEMA, label: 'retrieve:pplx-r2', phase: 'Round 2', model: 'haiku' })
       const cap2 = Math.max(0, Math.min(tier.r2read, tier.hardCap - readIds.size))
       const tri2 = await agent(triagePrompt(runDir, gaps, verdictQ, cap2, [...readIds], 'Round 2'),
-        { schema: TRIAGE_SCHEMA, label: 'triage:r2', phase: 'Round 2' })
+        { schema: TRIAGE_SCHEMA, label: 'triage:r2', phase: 'Round 2', model: 'sonnet' })
       const sel2 = (tri2 && tri2.selected ? tri2.selected : []).filter((s) => !readIds.has(s.source_id))
       const reads2 = (await parallel(sel2.map((s) => () =>
-        agent(readPrompt(s, runDir, verdictQ), { schema: READ_SCHEMA, label: `read:${s.origin || 'src'}`, phase: 'Round 2' })
+        agent(readPrompt(s, runDir, verdictQ), { schema: READ_SCHEMA, label: `read:${s.origin || 'src'}`, phase: 'Round 2', model: 'sonnet' })
       ))).filter(Boolean)
       sel2.forEach((s) => readIds.add(s.source_id))
       totalReachable += reads2.filter((r) => r.reachable).length
@@ -452,13 +452,13 @@ if (tier.r3 > 0 && readIds.size < tier.hardCap) {
     if (r3Queries.length) {
       r3qCount = r3Queries.length
       await agent(retrieveLoopPrompt(r3Queries, runDir, tier.r3lim, 'Round 3'),
-        { schema: RUN_SCHEMA, label: 'retrieve:pplx-r3', phase: 'Round 3' })
+        { schema: RUN_SCHEMA, label: 'retrieve:pplx-r3', phase: 'Round 3', model: 'haiku' })
       const cap3 = Math.max(0, Math.min(tier.r3read, tier.hardCap - readIds.size))
       const tri3 = await agent(triagePrompt(runDir, loadBearing, verdictQ, cap3, [...readIds], 'Round 3'),
-        { schema: TRIAGE_SCHEMA, label: 'triage:r3', phase: 'Round 3' })
+        { schema: TRIAGE_SCHEMA, label: 'triage:r3', phase: 'Round 3', model: 'sonnet' })
       const sel3 = (tri3 && tri3.selected ? tri3.selected : []).filter((s) => !readIds.has(s.source_id))
       const reads3 = (await parallel(sel3.map((s) => () =>
-        agent(readPrompt(s, runDir, verdictQ), { schema: READ_SCHEMA, label: 'read:confirm', phase: 'Round 3' })
+        agent(readPrompt(s, runDir, verdictQ), { schema: READ_SCHEMA, label: 'read:confirm', phase: 'Round 3', model: 'sonnet' })
       ))).filter(Boolean)
       sel3.forEach((s) => readIds.add(s.source_id))
       totalReachable += reads3.filter((r) => r.reachable).length
